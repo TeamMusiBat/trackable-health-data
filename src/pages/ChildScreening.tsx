@@ -30,6 +30,9 @@ import { toast } from "@/hooks/use-toast";
 import { ChildScreeningData, DuplicateEntry } from "@/lib/types";
 import { FileSpreadsheet, Plus, AlertTriangle, MapPin, Building } from "lucide-react";
 
+// Define gender type to ensure consistency
+type Gender = "Male" | "Female" | "Other";
+
 const ChildScreening = () => {
   const { isAuthenticated } = useAuth();
   const { childScreening, addChildScreening, bulkAddChildScreening, checkDuplicate, exportData } = useData();
@@ -38,7 +41,7 @@ const ChildScreening = () => {
     name: "",
     father: "",
     age: "", // Changed from 0 to empty string
-    gender: "Male" as const, // Using as const to fix the type
+    gender: "Male" as Gender, // Using proper type
     muac: "", // Changed from 0 to empty string
     district: "",
     unionCouncil: "",
@@ -68,7 +71,7 @@ const ChildScreening = () => {
     name: "",
     father: "",
     age: "", // Changed from 0 to empty string
-    gender: "Male" as const, // Using as const to fix the type
+    gender: "Male" as Gender, // Using proper type
     muac: "", // Changed from 0 to empty string
     district: parsedLocation.district || "",
     unionCouncil: parsedLocation.unionCouncil || "",
@@ -137,7 +140,7 @@ const ChildScreening = () => {
       ...formData,
       age: formData.age === '' ? 0 : parseFloat(String(formData.age)),
       muac: formData.muac === '' ? 0 : parseFloat(String(formData.muac)),
-      gender: formData.gender as "Male" | "Female" | "Other", // Ensure correct type
+      gender: formData.gender as Gender, // Ensure correct type
     };
 
     const duplicate = checkDuplicate(parsedFormData);
@@ -187,7 +190,7 @@ const ChildScreening = () => {
       ...formData,
       age: formData.age === '' ? 0 : parseFloat(String(formData.age)),
       muac: formData.muac === '' ? 0 : parseFloat(String(formData.muac)),
-      gender: formData.gender as "Male" | "Female" | "Other", // Ensure correct type
+      gender: formData.gender as Gender, // Ensure correct type
     };
 
     const duplicate = checkDuplicate(parsedFormData);
@@ -262,7 +265,7 @@ const ChildScreening = () => {
       ...formData,
       age: formData.age === '' ? 0 : parseFloat(String(formData.age)),
       muac: formData.muac === '' ? 0 : parseFloat(String(formData.muac)),
-      gender: formData.gender as "Male" | "Female" | "Other", // Ensure correct type
+      gender: formData.gender as Gender, // Ensure correct type
       serialNo: nextSerialNo,
       date: new Date()
     };
@@ -447,7 +450,10 @@ const ChildScreening = () => {
               </div>
               <div className="space-y-2">
                 <Label>Gender</Label>
-                <Select value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value })}>
+                <Select 
+                  value={formData.gender} 
+                  onValueChange={(value: Gender) => setFormData({ ...formData, gender: value })}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
