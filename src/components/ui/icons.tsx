@@ -5,7 +5,9 @@ import {
   CalendarDays, 
   FileSpreadsheet, 
   Database, 
-  Phone
+  Phone,
+  Map,
+  MapPin
 } from "lucide-react";
 
 export {
@@ -13,5 +15,7 @@ export {
   CalendarDays, 
   FileSpreadsheet, 
   Database, 
-  Phone
+  Phone,
+  Map,
+  MapPin
 };

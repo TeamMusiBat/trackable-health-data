@@ -16,14 +16,18 @@ import {
   Users, 
   CalendarDays, 
   AlertTriangle,
-  Phone
+  Phone,
+  Map
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { LocationsModal } from "@/components/LocationsModal";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Dashboard = () => {
   const { currentUser, isAuthenticated } = useAuth();
   const { childScreening, awarenessSessionsFMT, awarenessSessionsSM, syncData, exportData, loading } = useData();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   
   const [stats, setStats] = useState({
     totalChildren: 0,
@@ -34,6 +38,9 @@ const Dashboard = () => {
     awarenessTotal: 0,
     unsyncedCount: 0,
   });
+
+  const [locationModalOpen, setLocationModalOpen] = useState(false);
+  const [fieldWorkerLocations, setFieldWorkerLocations] = useState<any[]>([]);
 
   useEffect(() => {
     const today = new Date().toDateString();
@@ -66,28 +73,22 @@ const Dashboard = () => {
 
   // Handle field worker locations view
   const handleViewFieldWorkerLocations = () => {
-    // In a real app, this would navigate to a map view or show a modal with locations
-    toast({
-      title: "Field Worker Locations",
-      description: "This feature would display a map with all field worker locations.",
-    });
+    // Simulate location data
+    const mockLocations = [
+      { name: "John Doe", latitude: 31.5204, longitude: 74.3587, lastActive: "10 minutes ago" },
+      { name: "Jane Smith", latitude: 31.5074, longitude: 74.3444, lastActive: "2 hours ago" },
+      { name: "Ahmed Khan", latitude: 31.5102, longitude: 74.3434, lastActive: "5 minutes ago" }
+    ];
     
-    // For demo purposes
-    if (currentUser?.role === 'developer' || currentUser?.role === 'master') {
-      // Simulate location data
-      const mockLocations = [
-        { name: "John Doe", latitude: 31.5204, longitude: 74.3587, lastActive: "10 minutes ago" },
-        { name: "Jane Smith", latitude: 31.5074, longitude: 74.3444, lastActive: "2 hours ago" },
-        { name: "Ahmed Khan", latitude: 31.5102, longitude: 74.3434, lastActive: "5 minutes ago" }
-      ];
-      
-      console.log("Field worker locations:", mockLocations);
-      
-      toast({
-        title: "Locations Available",
-        description: `${mockLocations.length} field workers' locations loaded`,
-      });
-    }
+    setFieldWorkerLocations(mockLocations);
+    setLocationModalOpen(true);
+    
+    console.log("Field worker locations:", mockLocations);
+    
+    toast({
+      title: "Locations Available",
+      description: `${mockLocations.length} field workers' locations loaded`,
+    });
   };
 
   // Handle WhatsApp contact
@@ -143,7 +144,7 @@ const Dashboard = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
+          <Card className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Children Screened
@@ -160,7 +161,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 SAM Cases
@@ -179,7 +180,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 MAM Cases
@@ -198,7 +199,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Awareness Sessions
@@ -217,7 +218,7 @@ const Dashboard = () => {
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2">
+          <Card className="lg:col-span-2 hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle>Nutrition Status Overview</CardTitle>
               <CardDescription>
@@ -229,16 +230,16 @@ const Dashboard = () => {
                 <div className="w-full">
                   <div className="flex h-4 mb-6">
                     <div 
-                      className="bg-nutrition-sam" 
-                      style={{ width: `${(stats.samCases / stats.totalChildren) * 100 || 0}%` }}
+                      className="bg-nutrition-sam rounded-l-full" 
+                      style={{ width: `${(stats.samCases / stats.totalChildren) * 100 || 0}%`, minWidth: stats.samCases > 0 ? '10px' : '0' }}
                     ></div>
                     <div 
                       className="bg-nutrition-mam" 
-                      style={{ width: `${(stats.mamCases / stats.totalChildren) * 100 || 0}%` }}
+                      style={{ width: `${(stats.mamCases / stats.totalChildren) * 100 || 0}%`, minWidth: stats.mamCases > 0 ? '10px' : '0' }}
                     ></div>
                     <div 
-                      className="bg-nutrition-normal" 
-                      style={{ width: `${(stats.normalCases / stats.totalChildren) * 100 || 0}%` }}
+                      className="bg-nutrition-normal rounded-r-full" 
+                      style={{ width: `${(stats.normalCases / stats.totalChildren) * 100 || 0}%`, minWidth: stats.normalCases > 0 ? '10px' : '0' }}
                     ></div>
                   </div>
                   
@@ -281,7 +282,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
               <CardDescription>
@@ -320,10 +321,10 @@ const Dashboard = () => {
                 {(currentUser?.role === 'developer' || currentUser?.role === 'master') && (
                   <Button 
                     className="w-full justify-start" 
-                    variant="outline"
+                    variant={isMobile ? "outline" : "outline"}
                     onClick={handleViewFieldWorkerLocations}
                   >
-                    <MapPin className="mr-2 h-4 w-4" />
+                    <Map className="mr-2 h-4 w-4" />
                     View Field Worker Locations
                   </Button>
                 )}
@@ -344,6 +345,13 @@ const Dashboard = () => {
       </main>
       
       <Footer />
+      
+      <LocationsModal 
+        open={locationModalOpen}
+        onOpenChange={setLocationModalOpen}
+        locations={fieldWorkerLocations}
+        onRefresh={handleViewFieldWorkerLocations}
+      />
     </div>
   );
 };
