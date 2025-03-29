@@ -38,7 +38,7 @@ const ChildScreening = () => {
     name: "",
     father: "",
     age: "", // Changed from 0 to empty string
-    gender: "Male",
+    gender: "Male" as const, // Using as const to fix the type
     muac: "", // Changed from 0 to empty string
     district: "",
     unionCouncil: "",
@@ -68,7 +68,7 @@ const ChildScreening = () => {
     name: "",
     father: "",
     age: "", // Changed from 0 to empty string
-    gender: "Male",
+    gender: "Male" as const, // Using as const to fix the type
     muac: "", // Changed from 0 to empty string
     district: parsedLocation.district || "",
     unionCouncil: parsedLocation.unionCouncil || "",
@@ -137,6 +137,7 @@ const ChildScreening = () => {
       ...formData,
       age: formData.age === '' ? 0 : parseFloat(String(formData.age)),
       muac: formData.muac === '' ? 0 : parseFloat(String(formData.muac)),
+      gender: formData.gender as "Male" | "Female" | "Other", // Ensure correct type
     };
 
     const duplicate = checkDuplicate(parsedFormData);
@@ -186,6 +187,7 @@ const ChildScreening = () => {
       ...formData,
       age: formData.age === '' ? 0 : parseFloat(String(formData.age)),
       muac: formData.muac === '' ? 0 : parseFloat(String(formData.muac)),
+      gender: formData.gender as "Male" | "Female" | "Other", // Ensure correct type
     };
 
     const duplicate = checkDuplicate(parsedFormData);
@@ -260,6 +262,7 @@ const ChildScreening = () => {
       ...formData,
       age: formData.age === '' ? 0 : parseFloat(String(formData.age)),
       muac: formData.muac === '' ? 0 : parseFloat(String(formData.muac)),
+      gender: formData.gender as "Male" | "Female" | "Other", // Ensure correct type
       serialNo: nextSerialNo,
       date: new Date()
     };
