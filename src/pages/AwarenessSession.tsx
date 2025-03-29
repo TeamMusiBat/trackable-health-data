@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
@@ -23,7 +24,7 @@ import {
 } from "@/components/ui/card";
 import { Navigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
-import { FileSpreadsheet, Plus, X } from "lucide-react";
+import { FileSpreadsheet, Plus, X, Map, Building } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AwarenessSessionData } from "@/lib/types";
 
@@ -69,6 +70,9 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
   const todaysSessions = sessionsData.filter(
     session => new Date(session.date).toDateString() === today
   );
+  
+  // For location prominence
+  const [locationSet, setLocationSet] = useState(false);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -76,15 +80,23 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
     const { name, value, type: inputType } = e.target;
     
     if (inputType === "number") {
+      // For age and underFiveChildren, convert to number but remove leading zeros
+      const numValue = value === '' ? 0 : parseInt(value, 10);
       setFormData({
         ...formData,
-        [name]: parseFloat(value) || 0,
+        [name]: numValue,
       });
     } else {
       setFormData({
         ...formData,
         [name]: value,
       });
+      
+      // Set the location flag if both village and UC are filled
+      if ((name === 'villageName' || name === 'ucName') && 
+          formData.villageName.trim() && formData.ucName.trim()) {
+        setLocationSet(true);
+      }
     }
   };
 
@@ -211,6 +223,10 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
     return <Navigate to="/login" />;
   }
 
+  const locationTitle = formData.villageName && formData.ucName 
+    ? `${formData.villageName}, ${formData.ucName}` 
+    : 'Please set location';
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
@@ -236,6 +252,20 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
           </div>
         </div>
         
+        {/* Location Banner */}
+        <div className={`mb-6 p-4 rounded-lg border ${locationSet ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+          <div className="flex items-center gap-2">
+            <Map className={locationSet ? "text-green-600" : "text-amber-600"} />
+            <div className="font-medium text-lg">Current Location: {locationTitle}</div>
+          </div>
+          {locationSet && (
+            <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+              <Building className="h-4 w-4" />
+              <span>All new entries will be recorded at this location</span>
+            </div>
+          )}
+        </div>
+        
         <Tabs defaultValue="entry">
           <TabsList className="mb-6 w-full sm:w-auto">
             <TabsTrigger value="entry">Data Entry</TabsTrigger>
@@ -248,11 +278,43 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
                 <CardHeader>
                   <CardTitle>Participant Information</CardTitle>
                   <CardDescription>
-                    Enter participant details for {sessionType.toLowerCase()} awareness session
+                    Enter participant details for {sessionType.toLowerCase()} awareness session 
+                    {locationSet ? ` in ${formData.villageName}` : ''}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* Location Input Card (Styled to stand out) */}
+                    <div className="bg-muted p-4 rounded-md mb-4">
+                      <h3 className="font-medium mb-2 flex items-center gap-1">
+                        <Map className="h-4 w-4" /> 
+                        Session Location
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="villageName">Village Name *</Label>
+                          <Input
+                            id="villageName"
+                            name="villageName"
+                            value={formData.villageName}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="ucName">UC Name *</Label>
+                          <Input
+                            id="ucName"
+                            name="ucName"
+                            value={formData.ucName}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="serialNo">Serial No.</Label>
@@ -327,28 +389,6 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="villageName">Village Name *</Label>
-                      <Input
-                        id="villageName"
-                        name="villageName"
-                        value={formData.villageName}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="ucName">UC Name *</Label>
-                      <Input
-                        id="ucName"
-                        name="ucName"
-                        value={formData.ucName}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
                       <Label htmlFor="contactNumber">Contact Number</Label>
                       <Input
                         id="contactNumber"
@@ -379,6 +419,7 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
                     <CardTitle>Bulk Entry List</CardTitle>
                     <CardDescription>
                       {bulkEntries.length} participants ready for submission
+                      {locationSet ? ` in ${formData.villageName}, ${formData.ucName}` : ''}
                     </CardDescription>
                   </div>
                   <Button onClick={handleBulkSubmit} disabled={bulkEntries.length === 0}>
