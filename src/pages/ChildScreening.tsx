@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
@@ -46,7 +47,7 @@ const ChildScreening = () => {
     dueVaccine: false,
     remarks: "",
   });
-  const [bulkEntries, setBulkEntries] = useState<Omit<ChildScreeningData, 'id' | 'userId' | 'synced'>[]>([]);
+  const [bulkEntries, setBulkEntries] = useState<Array<Omit<ChildScreeningData, 'id' | 'userId' | 'synced'>>>([]);
   const [isBulkEntry, setIsBulkEntry] = useState(false);
   const [duplicateEntry, setDuplicateEntry] = useState<DuplicateEntry>({ exists: false });
 
@@ -82,7 +83,7 @@ const ChildScreening = () => {
     !!(parsedLocation.district && parsedLocation.unionCouncil && parsedLocation.village)
   );
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
     
     if (name === 'age' || name === 'muac') {
@@ -131,13 +132,31 @@ const ChildScreening = () => {
       return;
     }
 
-    const duplicate = checkDuplicate(formData);
+    // Convert age and muac to numbers for type checking
+    const parsedFormData = {
+      ...formData,
+      age: formData.age === '' ? 0 : parseFloat(String(formData.age)),
+      muac: formData.muac === '' ? 0 : parseFloat(String(formData.muac)),
+    };
+
+    const duplicate = checkDuplicate(parsedFormData);
     if (duplicate.exists) {
       setDuplicateEntry(duplicate);
       return;
     }
 
-    setBulkEntries((prev) => [...prev, { ...formData, age: formData.age === '' ? 0 : parseFloat(String(formData.age)), muac: formData.muac === '' ? 0 : parseFloat(String(formData.muac)) }]);
+    // Get the next serial number
+    const nextSerialNo = childScreening.length + bulkEntries.length + 1;
+    
+    setBulkEntries((prev) => [
+      ...prev,
+      {
+        ...parsedFormData,
+        serialNo: nextSerialNo,
+        date: new Date(),
+      }
+    ]);
+    
     setFormData({
       ...initialFormState,
       district: formData.district,
@@ -162,16 +181,25 @@ const ChildScreening = () => {
       return;
     }
 
-    const duplicate = checkDuplicate(formData);
+    // Convert age and muac to numbers for type checking
+    const parsedFormData = {
+      ...formData,
+      age: formData.age === '' ? 0 : parseFloat(String(formData.age)),
+      muac: formData.muac === '' ? 0 : parseFloat(String(formData.muac)),
+    };
+
+    const duplicate = checkDuplicate(parsedFormData);
     if (duplicate.exists) {
       setDuplicateEntry(duplicate);
       return;
     }
 
+    // Get the next serial number
+    const nextSerialNo = childScreening.length + 1;
+    
     const submissionData = {
-      ...formData,
-      age: formData.age === '' ? 0 : parseFloat(String(formData.age)),
-      muac: formData.muac === '' ? 0 : parseFloat(String(formData.muac)),
+      ...parsedFormData,
+      serialNo: nextSerialNo,
       date: new Date()
     };
 
@@ -209,14 +237,7 @@ const ChildScreening = () => {
     }
 
     // If all entries are unique, proceed with submission
-    const submissionData = bulkEntries.map(entry => ({
-      ...entry,
-      age: typeof entry.age === 'string' ? parseFloat(String(entry.age)) : entry.age,
-      muac: typeof entry.muac === 'string' ? parseFloat(String(entry.muac)) : entry.muac,
-      date: new Date()
-    }));
-
-    await bulkAddChildScreening(submissionData);
+    await bulkAddChildScreening(bulkEntries);
     setBulkEntries([]);
     setFormData({
       ...initialFormState,
@@ -232,10 +253,14 @@ const ChildScreening = () => {
   };
 
   const handleForceSubmit = async () => {
+    // Get the next serial number
+    const nextSerialNo = childScreening.length + 1;
+    
     const submissionData = {
       ...formData,
       age: formData.age === '' ? 0 : parseFloat(String(formData.age)),
       muac: formData.muac === '' ? 0 : parseFloat(String(formData.muac)),
+      serialNo: nextSerialNo,
       date: new Date()
     };
 
