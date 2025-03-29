@@ -1,11 +1,11 @@
+
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Users, CalendarDays, FileSpreadsheet, Database } from "@/components/ui/icons";
-import { Phone } from "@/components/ui/icons";
+import { Users, CalendarDays, FileSpreadsheet, Database, Phone } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
