@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { DataProvider } from "./contexts/DataContext";
+import { RequireAuth } from "./components/RequireAuth";
 
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -30,11 +31,31 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/child-screening" element={<ChildScreening />} />
-                <Route path="/fmt-awareness" element={<AwarenessSession type="fmt" />} />
-                <Route path="/sm-awareness" element={<AwarenessSession type="sm" />} />
-                <Route path="/user-management" element={<UserManagement />} />
+                <Route path="/dashboard" element={
+                  <RequireAuth>
+                    <Dashboard />
+                  </RequireAuth>
+                } />
+                <Route path="/child-screening" element={
+                  <RequireAuth>
+                    <ChildScreening />
+                  </RequireAuth>
+                } />
+                <Route path="/fmt-awareness" element={
+                  <RequireAuth>
+                    <AwarenessSession type="fmt" />
+                  </RequireAuth>
+                } />
+                <Route path="/sm-awareness" element={
+                  <RequireAuth>
+                    <AwarenessSession type="sm" />
+                  </RequireAuth>
+                } />
+                <Route path="/user-management" element={
+                  <RequireAuth>
+                    <UserManagement />
+                  </RequireAuth>
+                } />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </DataProvider>

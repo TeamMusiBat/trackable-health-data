@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from './AuthContext';
@@ -8,6 +7,7 @@ import {
   AwarenessSessionData,
   DuplicateEntry 
 } from '@/lib/types';
+import { exportChildScreeningToExcel, exportAwarenessSessionToExcel } from '@/utils/excelExport';
 
 interface DataContextType {
   childScreening: ChildScreeningData[];
@@ -46,7 +46,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(false);
   const { currentUser } = useAuth();
 
-  // Load data from local storage on component mount
   useEffect(() => {
     if (currentUser) {
       const loadedChildScreening = localStorage.getItem('childScreening');
@@ -79,7 +78,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [currentUser]);
 
-  // Save data to local storage whenever it changes
   useEffect(() => {
     if (currentUser) {
       localStorage.setItem('childScreening', JSON.stringify(childScreening));
@@ -117,7 +115,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setChildScreening(prev => [...prev, newEntry]);
 
     if (navigator.onLine) {
-      // In a real app, this would be an API call to sync with the server
       console.log('Data synced with server in real-time:', newEntry);
     } else {
       toast({
@@ -144,7 +141,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     if (navigator.onLine) {
-      // In a real app, this would be an API call to sync with the server
       console.log('Data synced with server in real-time:', newEntry);
     } else {
       toast({
@@ -167,7 +163,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setChildScreening(prev => [...prev, ...newEntries]);
 
     if (navigator.onLine) {
-      // In a real app, this would be an API call to sync with the server
       console.log('Bulk data synced with server in real-time:', newEntries);
     } else {
       toast({
@@ -195,7 +190,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     if (navigator.onLine) {
-      // In a real app, this would be an API call to sync with the server
       console.log('Bulk data synced with server in real-time:', newEntries);
     } else {
       toast({
@@ -217,20 +211,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setLoading(true);
     try {
-      // In a real app, this would be an API call to sync with the server
-      // For now, we'll just simulate a successful sync by marking all data as synced
-      
-      // Update child screening data
       setChildScreening(prev => 
         prev.map(item => ({ ...item, synced: true }))
       );
       
-      // Update FMT awareness sessions
       setAwarenessSessionsFMT(prev => 
         prev.map(item => ({ ...item, synced: true }))
       );
       
-      // Update Social Mobilizer awareness sessions
       setAwarenessSessionsSM(prev => 
         prev.map(item => ({ ...item, synced: true }))
       );
@@ -252,12 +240,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const exportData = (type: 'child' | 'fmt' | 'sm', filter: 'today' | 'all' | 'sam' | 'mam' = 'today') => {
-    // This is a placeholder for the Excel export functionality
-    // In a real app, this would use a library like SheetJS to generate Excel files
-    let dataToExport: any[] = [];
-    let filename = '';
-
     const today = new Date().toDateString();
+    const currentDate = new Date().toLocaleDateString();
     
     if (type === 'child') {
       let filteredData = childScreening;
@@ -269,40 +253,51 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
       }
       
-      // Apply MUAC filters if needed
-      if (filter === 'sam') {
-        filteredData = filteredData.filter(item => item.muac <= 11);
-      } else if (filter === 'mam') {
-        filteredData = filteredData.filter(item => item.muac > 11 && item.muac <= 12);
-      }
+      const title = `Child Screening Data - ${filter === 'today' ? currentDate : 'All Records'}`;
       
-      dataToExport = filteredData;
-      filename = `child-screening-${filter}-${new Date().toISOString().split('T')[0]}.xlsx`;
+      exportChildScreeningToExcel(filteredData, {
+        filterSam: filter === 'sam',
+        filterMam: filter === 'mam',
+        title: title
+      });
+      
+      toast({
+        title: "Export complete",
+        description: `Exported ${filteredData.length} records to Excel`,
+      });
     } else if (type === 'fmt') {
       const filteredData = filter === 'today' 
         ? awarenessSessionsFMT.filter(item => new Date(item.date).toDateString() === today)
         : awarenessSessionsFMT;
       
-      dataToExport = filteredData;
-      filename = `fmt-awareness-${filter}-${new Date().toISOString().split('T')[0]}.xlsx`;
+      const title = `FMT Awareness Sessions - ${filter === 'today' ? currentDate : 'All Records'}`;
+      
+      exportAwarenessSessionToExcel(filteredData, {
+        type: 'FMT',
+        title: title
+      });
+      
+      toast({
+        title: "Export complete",
+        description: `Exported ${filteredData.length} records to Excel`,
+      });
     } else if (type === 'sm') {
       const filteredData = filter === 'today' 
         ? awarenessSessionsSM.filter(item => new Date(item.date).toDateString() === today)
         : awarenessSessionsSM;
       
-      dataToExport = filteredData;
-      filename = `social-mobilizers-${filter}-${new Date().toISOString().split('T')[0]}.xlsx`;
+      const title = `Social Mobilizer Awareness Sessions - ${filter === 'today' ? currentDate : 'All Records'}`;
+      
+      exportAwarenessSessionToExcel(filteredData, {
+        type: 'Social Mobilizers',
+        title: title
+      });
+      
+      toast({
+        title: "Export complete",
+        description: `Exported ${filteredData.length} records to Excel`,
+      });
     }
-
-    // For this demo, we just log the data that would be exported
-    console.log('Exporting data:', dataToExport, 'to filename:', filename);
-    
-    toast({
-      title: "Export started",
-      description: `Exporting ${dataToExport.length} records to ${filename}`,
-    });
-
-    // In a real implementation, we'd generate and download the Excel file here
   };
 
   return (

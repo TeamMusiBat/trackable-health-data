@@ -7,7 +7,8 @@ import {
   Database, 
   Phone,
   Map,
-  MapPin
+  MapPin,
+  Globe
 } from "lucide-react";
 
 export {
@@ -17,5 +18,6 @@ export {
   Database, 
   Phone,
   Map,
-  MapPin
+  MapPin,
+  Globe
 };
