@@ -34,8 +34,8 @@ interface SessionFormData {
   fatherOrHusband: string;
   villageName: string;
   ucName: string;
-  age: number;
-  underFiveChildren: number;
+  age: number | string;
+  underFiveChildren: number | string;
   contactNumber: string;
 }
 
@@ -49,8 +49,8 @@ const initialFormState: SessionFormData = {
   fatherOrHusband: "",
   villageName: "",
   ucName: "",
-  age: 18,
-  underFiveChildren: 0,
+  age: "",
+  underFiveChildren: "",
   contactNumber: "",
 };
 
@@ -61,7 +61,24 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
   const sessionType = type === "fmt" ? "FMT" : "Social Mobilizers";
   const pageTitle = `${sessionType} Awareness Sessions`;
   
-  const [formData, setFormData] = useState<SessionFormData>(initialFormState);
+  // Initialize form data with stored location if available
+  const storedLocation = localStorage.getItem('sessionLocation');
+  let parsedLocation = { villageName: "", ucName: "" };
+  
+  if (storedLocation) {
+    try {
+      parsedLocation = JSON.parse(storedLocation);
+    } catch (e) {
+      console.error('Failed to parse stored location', e);
+    }
+  }
+  
+  const [formData, setFormData] = useState<SessionFormData>({
+    ...initialFormState,
+    villageName: parsedLocation.villageName || "",
+    ucName: parsedLocation.ucName || ""
+  });
+  
   const [bulkEntries, setBulkEntries] = useState<SessionFormData[]>([]);
 
   // Get today's data for display in Today's Sessions tab
@@ -72,16 +89,18 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
   );
   
   // For location prominence
-  const [locationSet, setLocationSet] = useState(false);
+  const [locationSet, setLocationSet] = useState(
+    !!(parsedLocation.villageName && parsedLocation.ucName)
+  );
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const { name, value, type: inputType } = e.target;
     
-    if (inputType === "number") {
-      // For age and underFiveChildren, convert to number but remove leading zeros
-      const numValue = value === '' ? 0 : parseInt(value, 10);
+    if (name === 'age' || name === 'underFiveChildren') {
+      // Remove leading zeros for numeric fields
+      const numValue = value === '' ? '' : String(parseInt(value || '0', 10));
       setFormData({
         ...formData,
         [name]: numValue,
@@ -92,10 +111,18 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
         [name]: value,
       });
       
-      // Set the location flag if both village and UC are filled
-      if ((name === 'villageName' || name === 'ucName') && 
-          formData.villageName.trim() && formData.ucName.trim()) {
-        setLocationSet(true);
+      // Update location in localStorage when either village or UC changes
+      if (name === 'villageName' || name === 'ucName') {
+        const newLocation = {
+          villageName: name === 'villageName' ? value : formData.villageName,
+          ucName: name === 'ucName' ? value : formData.ucName
+        };
+        
+        // Only save and update if both fields have values
+        if (newLocation.villageName && newLocation.ucName) {
+          localStorage.setItem('sessionLocation', JSON.stringify(newLocation));
+          setLocationSet(true);
+        }
       }
     }
   };
@@ -110,10 +137,15 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
       return;
     }
 
-    // Add to bulk entries
+    // Add to bulk entries, ensuring numbers are parsed
     setBulkEntries([
       ...bulkEntries,
-      { ...formData, serialNo: bulkEntries.length + 1 },
+      { 
+        ...formData, 
+        serialNo: bulkEntries.length + 1,
+        age: formData.age === '' ? 0 : parseInt(String(formData.age), 10),
+        underFiveChildren: formData.underFiveChildren === '' ? 0 : parseInt(String(formData.underFiveChildren), 10),
+      },
     ]);
     
     // Reset form but keep village and UC
@@ -161,9 +193,11 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
       return;
     }
 
-    // Add single entry
+    // Add single entry, ensuring numbers are parsed
     await addAwarenessSession({
       ...formData,
+      age: formData.age === '' ? 0 : parseInt(String(formData.age), 10),
+      underFiveChildren: formData.underFiveChildren === '' ? 0 : parseInt(String(formData.underFiveChildren), 10),
       type: sessionType as any,
       date: new Date(),
     });
@@ -194,6 +228,9 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
     // Add session type and date to all entries
     const processedEntries = bulkEntries.map(entry => ({
       ...entry,
+      age: typeof entry.age === 'string' ? parseInt(entry.age || '0', 10) : entry.age,
+      underFiveChildren: typeof entry.underFiveChildren === 'string' ? 
+        parseInt(String(entry.underFiveChildren || '0'), 10) : entry.underFiveChildren,
       type: sessionType as any,
       date: new Date(),
     }));
@@ -253,9 +290,9 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
         </div>
         
         {/* Location Banner */}
-        <div className={`mb-6 p-4 rounded-lg border ${locationSet ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+        <div className={`mb-6 p-4 rounded-lg border ${locationSet ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800'}`}>
           <div className="flex items-center gap-2">
-            <Map className={locationSet ? "text-green-600" : "text-amber-600"} />
+            <Map className={locationSet ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"} />
             <div className="font-medium text-lg">Current Location: {locationTitle}</div>
           </div>
           {locationSet && (
@@ -384,7 +421,6 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
                         min="0"
                         value={formData.underFiveChildren}
                         onChange={handleInputChange}
-                        required
                       />
                     </div>
                     
@@ -446,7 +482,7 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
                               <TableCell>{entry.serialNo}</TableCell>
                               <TableCell className="font-medium">{entry.name}</TableCell>
                               <TableCell>{entry.fatherOrHusband}</TableCell>
-                              <TableCell>{entry.age} years</TableCell>
+                              <TableCell>{entry.age}</TableCell>
                               <TableCell>{entry.villageName}</TableCell>
                               <TableCell>
                                 <Button

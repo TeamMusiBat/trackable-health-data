@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -15,12 +15,16 @@ import {
   MapPin, 
   Users, 
   CalendarDays, 
-  AlertTriangle
+  AlertTriangle,
+  Phone
 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const { currentUser, isAuthenticated } = useAuth();
-  const { childScreening, awarenessSessionsFMT, awarenessSessionsSM, syncData, loading } = useData();
+  const { childScreening, awarenessSessionsFMT, awarenessSessionsSM, syncData, exportData, loading } = useData();
+  const navigate = useNavigate();
+  
   const [stats, setStats] = useState({
     totalChildren: 0,
     samCases: 0,
@@ -59,6 +63,54 @@ const Dashboard = () => {
       unsyncedCount,
     });
   }, [childScreening, awarenessSessionsFMT, awarenessSessionsSM]);
+
+  // Handle field worker locations view
+  const handleViewFieldWorkerLocations = () => {
+    // In a real app, this would navigate to a map view or show a modal with locations
+    toast({
+      title: "Field Worker Locations",
+      description: "This feature would display a map with all field worker locations.",
+    });
+    
+    // For demo purposes
+    if (currentUser?.role === 'developer' || currentUser?.role === 'master') {
+      // Simulate location data
+      const mockLocations = [
+        { name: "John Doe", latitude: 31.5204, longitude: 74.3587, lastActive: "10 minutes ago" },
+        { name: "Jane Smith", latitude: 31.5074, longitude: 74.3444, lastActive: "2 hours ago" },
+        { name: "Ahmed Khan", latitude: 31.5102, longitude: 74.3434, lastActive: "5 minutes ago" }
+      ];
+      
+      console.log("Field worker locations:", mockLocations);
+      
+      toast({
+        title: "Locations Available",
+        description: `${mockLocations.length} field workers' locations loaded`,
+      });
+    }
+  };
+
+  // Handle WhatsApp contact
+  const handleWhatsAppContact = () => {
+    window.open("https://wa.me/923032939576", "_blank");
+  };
+
+  // Handle export actions
+  const handleExportScreening = (filter: 'today' | 'all' | 'sam' | 'mam' = 'today') => {
+    exportData('child', filter);
+  };
+
+  // Navigate to view SAM/MAM cases 
+  const handleViewSamMamCases = () => {
+    // In a real app, this might navigate to a dedicated page
+    // For now, we'll just show a summary
+    const samMamCases = childScreening.filter(child => child.muac <= 12);
+    
+    toast({
+      title: `${samMamCases.length} SAM/MAM Cases Found`,
+      description: `SAM: ${stats.samCases}, MAM: ${stats.mamCases}`,
+    });
+  };
 
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
@@ -238,27 +290,53 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <Button className="w-full justify-start" variant="outline">
+                <Button 
+                  className="w-full justify-start" 
+                  variant="outline"
+                  onClick={() => handleExportScreening('today')}
+                >
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
                   Export Today's Screening
                 </Button>
                 
-                <Button className="w-full justify-start" variant="outline">
+                <Button 
+                  className="w-full justify-start" 
+                  variant="outline"
+                  onClick={handleViewSamMamCases}
+                >
                   <CheckCheck className="mr-2 h-4 w-4" />
                   View SAM/MAM Cases
                 </Button>
                 
-                <Button className="w-full justify-start" variant="outline">
+                <Button 
+                  className="w-full justify-start" 
+                  variant="outline"
+                  onClick={() => exportData('fmt', 'today')}
+                >
                   <CalendarDays className="mr-2 h-4 w-4" />
                   Export Awareness Sessions
                 </Button>
                 
                 {(currentUser?.role === 'developer' || currentUser?.role === 'master') && (
-                  <Button className="w-full justify-start" variant="outline">
+                  <Button 
+                    className="w-full justify-start" 
+                    variant="outline"
+                    onClick={handleViewFieldWorkerLocations}
+                  >
                     <MapPin className="mr-2 h-4 w-4" />
                     View Field Worker Locations
                   </Button>
                 )}
+                
+                {/* WhatsApp Contact Button - Available to all users */}
+                <Button 
+                  className="w-full justify-start" 
+                  variant="outline"
+                  onClick={handleWhatsAppContact}
+                >
+                  <Phone className="mr-2 h-4 w-4" />
+                  Contact Support (WhatsApp)
+                </Button>
               </div>
             </CardContent>
           </Card>
