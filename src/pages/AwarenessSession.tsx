@@ -21,7 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Navigate, useParams } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { FileSpreadsheet, Plus, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -38,6 +38,10 @@ interface SessionFormData {
   contactNumber: string;
 }
 
+interface AwarenessSessionProps {
+  type: "fmt" | "sm";
+}
+
 const initialFormState: SessionFormData = {
   serialNo: 1,
   name: "",
@@ -49,10 +53,9 @@ const initialFormState: SessionFormData = {
   contactNumber: "",
 };
 
-const AwarenessSession = () => {
+const AwarenessSession = ({ type }: AwarenessSessionProps) => {
   const { isAuthenticated } = useAuth();
   const { awarenessSessionsFMT, awarenessSessionsSM, addAwarenessSession, bulkAddAwarenessSession, exportData } = useData();
-  const { type } = useParams<{ type: string }>();
 
   const sessionType = type === "fmt" ? "FMT" : "Social Mobilizers";
   const pageTitle = `${sessionType} Awareness Sessions`;
@@ -70,9 +73,9 @@ const AwarenessSession = () => {
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const { name, value, type } = e.target;
+    const { name, value, type: inputType } = e.target;
     
-    if (type === "number") {
+    if (inputType === "number") {
       setFormData({
         ...formData,
         [name]: parseFloat(value) || 0,
