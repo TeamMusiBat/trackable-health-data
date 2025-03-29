@@ -4,7 +4,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { LogOut, Menu, User } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   Sheet,
   SheetContent,
@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 export function Header() {
   const { currentUser, logout, isAuthenticated } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
 
   const NavItems = () => (
     <>
