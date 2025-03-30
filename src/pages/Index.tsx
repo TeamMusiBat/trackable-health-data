@@ -61,7 +61,7 @@ const Index = () => {
               </div>
               <div className="flex items-center justify-center">
                 <img
-                  src="/placeholder.svg"
+                  src="https://unicphscat.blob.core.windows.net/images-prd/s0145620.png"
                   width={500}
                   height={400}
                   alt="Health Screening"

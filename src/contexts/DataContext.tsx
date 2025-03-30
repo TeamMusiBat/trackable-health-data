@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from './AuthContext';
@@ -17,10 +18,13 @@ interface DataContextType {
   addAwarenessSession: (data: Omit<AwarenessSessionData, 'id' | 'userId' | 'synced'>) => Promise<void>;
   bulkAddChildScreening: (dataArray: Omit<ChildScreeningData, 'id' | 'userId' | 'synced'>[]) => Promise<void>;
   bulkAddAwarenessSession: (dataArray: Omit<AwarenessSessionData, 'id' | 'userId' | 'synced'>[]) => Promise<void>;
+  updateChildScreening: (id: string, data: Partial<ChildScreeningData>) => Promise<void>;
+  updateAwarenessSession: (id: string, data: Partial<AwarenessSessionData>) => Promise<void>;
   checkDuplicate: (data: Partial<ChildScreeningData>) => DuplicateEntry;
   syncData: () => Promise<void>;
   exportData: (type: 'child' | 'fmt' | 'sm', filter?: 'today' | 'all' | 'sam' | 'mam') => void;
   loading: boolean;
+  isOnline: boolean;
 }
 
 const DataContext = createContext<DataContextType>({
@@ -31,10 +35,13 @@ const DataContext = createContext<DataContextType>({
   addAwarenessSession: async () => {},
   bulkAddChildScreening: async () => {},
   bulkAddAwarenessSession: async () => {},
+  updateChildScreening: async () => {},
+  updateAwarenessSession: async () => {},
   checkDuplicate: () => ({ exists: false }),
   syncData: async () => {},
   exportData: () => {},
   loading: false,
+  isOnline: true,
 });
 
 export const useData = () => useContext(DataContext);
@@ -44,7 +51,36 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [awarenessSessionsFMT, setAwarenessSessionsFMT] = useState<AwarenessSessionData[]>([]);
   const [awarenessSessionsSM, setAwarenessSessionsSM] = useState<AwarenessSessionData[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const { currentUser } = useAuth();
+
+  // Monitor online/offline status
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      toast({
+        title: "You're back online",
+        description: "Your data will now sync with the server",
+      });
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      toast({
+        title: "You're offline",
+        description: "Don't worry, your data is saved locally",
+        variant: "destructive",
+      });
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     if (currentUser) {
@@ -109,12 +145,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...data,
       id: uuidv4(),
       userId: currentUser.id,
-      synced: navigator.onLine,
+      synced: isOnline,
     };
 
     setChildScreening(prev => [...prev, newEntry]);
 
-    if (navigator.onLine) {
+    if (isOnline) {
       console.log('Data synced with server in real-time:', newEntry);
     } else {
       toast({
@@ -131,7 +167,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...data,
       id: uuidv4(),
       userId: currentUser.id,
-      synced: navigator.onLine,
+      synced: isOnline,
     };
 
     if (data.type === 'FMT') {
@@ -140,7 +176,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAwarenessSessionsSM(prev => [...prev, newEntry]);
     }
 
-    if (navigator.onLine) {
+    if (isOnline) {
       console.log('Data synced with server in real-time:', newEntry);
     } else {
       toast({
@@ -157,12 +193,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...data,
       id: uuidv4(),
       userId: currentUser.id,
-      synced: navigator.onLine,
+      synced: isOnline,
     }));
 
     setChildScreening(prev => [...prev, ...newEntries]);
 
-    if (navigator.onLine) {
+    if (isOnline) {
       console.log('Bulk data synced with server in real-time:', newEntries);
     } else {
       toast({
@@ -180,7 +216,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...data,
       id: uuidv4(),
       userId: currentUser.id,
-      synced: navigator.onLine,
+      synced: isOnline,
     }));
 
     if (type === 'FMT') {
@@ -189,7 +225,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAwarenessSessionsSM(prev => [...prev, ...newEntries]);
     }
 
-    if (navigator.onLine) {
+    if (isOnline) {
       console.log('Bulk data synced with server in real-time:', newEntries);
     } else {
       toast({
@@ -199,8 +235,55 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateChildScreening = async (id: string, data: Partial<ChildScreeningData>) => {
+    if (!currentUser) return;
+
+    setChildScreening(prev => 
+      prev.map(item => 
+        item.id === id 
+          ? { ...item, ...data, synced: isOnline } 
+          : item
+      )
+    );
+
+    toast({
+      title: "Record updated",
+      description: isOnline ? "Record updated and synced" : "Record updated locally",
+    });
+  };
+
+  const updateAwarenessSession = async (id: string, data: Partial<AwarenessSessionData>) => {
+    if (!currentUser) return;
+
+    // Check if it's an FMT or SM session
+    const isFMT = awarenessSessionsFMT.some(session => session.id === id);
+    
+    if (isFMT) {
+      setAwarenessSessionsFMT(prev => 
+        prev.map(item => 
+          item.id === id 
+            ? { ...item, ...data, synced: isOnline } 
+            : item
+        )
+      );
+    } else {
+      setAwarenessSessionsSM(prev => 
+        prev.map(item => 
+          item.id === id 
+            ? { ...item, ...data, synced: isOnline } 
+            : item
+        )
+      );
+    }
+
+    toast({
+      title: "Record updated",
+      description: isOnline ? "Record updated and synced" : "Record updated locally",
+    });
+  };
+
   const syncData = async () => {
-    if (!navigator.onLine) {
+    if (!isOnline) {
       toast({
         title: "Sync failed",
         description: "You are offline. Please try again when you have an internet connection.",
@@ -310,10 +393,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addAwarenessSession,
         bulkAddChildScreening,
         bulkAddAwarenessSession,
+        updateChildScreening,
+        updateAwarenessSession,
         checkDuplicate,
         syncData,
         exportData,
         loading,
+        isOnline
       }}
     >
       {children}

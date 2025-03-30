@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ImageCapture } from "@/components/ImageCapture";
+import { EditableEntry } from "@/components/EditableEntry";
 import {
   Table,
   TableBody,
@@ -28,14 +30,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Navigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { ChildScreeningData, DuplicateEntry } from "@/lib/types";
-import { FileSpreadsheet, Plus, AlertTriangle, MapPin, Building } from "lucide-react";
+import { FileSpreadsheet, Plus, AlertTriangle, MapPin, Building, Wifi, WifiOff, Camera, Image as ImageIcon } from "lucide-react";
 
 // Define gender type to ensure consistency
 type Gender = "Male" | "Female" | "Other";
 
 const ChildScreening = () => {
-  const { isAuthenticated } = useAuth();
-  const { childScreening, addChildScreening, bulkAddChildScreening, checkDuplicate, exportData } = useData();
+  const { isAuthenticated, currentUser } = useAuth();
+  const { childScreening, addChildScreening, bulkAddChildScreening, updateChildScreening, checkDuplicate, exportData, isOnline } = useData();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -49,6 +51,7 @@ const ChildScreening = () => {
     vaccination: "0 - Dose",
     dueVaccine: false,
     remarks: "",
+    images: [] as string[],
   });
   const [bulkEntries, setBulkEntries] = useState<Array<Omit<ChildScreeningData, 'id' | 'userId' | 'synced'>>>([]);
   const [isBulkEntry, setIsBulkEntry] = useState(false);
@@ -79,11 +82,18 @@ const ChildScreening = () => {
     vaccination: "0 - Dose",
     dueVaccine: false,
     remarks: "",
+    images: [] as string[],
   };
 
   // Add a locationSet state:
   const [locationSet, setLocationSet] = useState(
     !!(parsedLocation.district && parsedLocation.unionCouncil && parsedLocation.village)
+  );
+  
+  // Get today's data for display
+  const today = new Date().toDateString();
+  const todaysScreenings = childScreening.filter(
+    item => new Date(item.date).toDateString() === today
   );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -123,6 +133,13 @@ const ChildScreening = () => {
         }
       }
     }
+  };
+  
+  const handleImagesChange = (images: string[]) => {
+    setFormData(prev => ({
+      ...prev,
+      images
+    }));
   };
 
   const handleAddToBulk = () => {
@@ -283,6 +300,12 @@ const ChildScreening = () => {
   const handleExport = (filter: 'today' | 'all' | 'sam' | 'mam' = 'today') => {
     exportData('child', filter);
   };
+  
+  const handleUpdateScreening = (id: string, updatedData: Partial<ChildScreeningData>) => {
+    updateChildScreening(id, updatedData);
+  };
+
+  const canEdit = currentUser?.role === 'admin' || currentUser?.role === 'developer';
 
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
@@ -314,6 +337,20 @@ const ChildScreening = () => {
               <FileSpreadsheet className="mr-2 h-4 w-4" />
               Export MAM Cases
             </Button>
+          </div>
+        </div>
+
+        {/* Online/Offline Status Banner */}
+        <div className={`mb-2 p-2 rounded-lg border ${isOnline ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800'}`}>
+          <div className="flex items-center gap-2">
+            {isOnline ? (
+              <Wifi className="text-green-600 dark:text-green-400 h-4 w-4" />
+            ) : (
+              <WifiOff className="text-amber-600 dark:text-amber-400 h-4 w-4" />
+            )}
+            <div className="text-sm font-medium">
+              {isOnline ? "Online - Data will be synced automatically" : "Offline - Data will be saved locally"}
+            </div>
           </div>
         </div>
 
@@ -499,6 +536,12 @@ const ChildScreening = () => {
                   placeholder="Any additional remarks"
                 />
               </div>
+              
+              <div className="space-y-2">
+                <Label>Screening Images</Label>
+                <ImageCapture onImagesChange={handleImagesChange} />
+              </div>
+              
               <div className="flex gap-2 pt-4">
                 <Button type="button" onClick={handleAddToBulk} className="flex-1">
                   <Plus className="mr-2 h-4 w-4" />
@@ -536,7 +579,7 @@ const ChildScreening = () => {
                       <TableHead>Father's Name</TableHead>
                       <TableHead>Age</TableHead>
                       <TableHead>MUAC (cm)</TableHead>
-                      <TableHead>Vaccination</TableHead>
+                      <TableHead>Images</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -546,11 +589,105 @@ const ChildScreening = () => {
                         <TableCell>{entry.father}</TableCell>
                         <TableCell>{entry.age}</TableCell>
                         <TableCell>{entry.muac}</TableCell>
-                        <TableCell>{entry.vaccination}</TableCell>
+                        <TableCell>
+                          {entry.images && entry.images.length > 0 ? (
+                            <div className="flex items-center gap-1">
+                              <ImageIcon className="h-4 w-4" />
+                              <span>{entry.images.length}</span>
+                            </div>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        <Card className="mt-6">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Today's Screenings</CardTitle>
+              <CardDescription>
+                {todaysScreenings.length} screenings performed today
+              </CardDescription>
+            </div>
+            <Button variant="outline" onClick={() => handleExport('today')}>
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {todaysScreenings.length > 0 ? (
+              <div className="rounded-md border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Father's Name</TableHead>
+                      <TableHead>Age (Months)</TableHead>
+                      <TableHead>MUAC (cm)</TableHead>
+                      <TableHead>Village</TableHead>
+                      <TableHead>Images</TableHead>
+                      {canEdit && <TableHead>Actions</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {todaysScreenings.map((screening) => (
+                      <TableRow key={screening.id}>
+                        <TableCell>{screening.name}</TableCell>
+                        <TableCell>{screening.father}</TableCell>
+                        <TableCell>{screening.age}</TableCell>
+                        <TableCell>{screening.muac}</TableCell>
+                        <TableCell>{screening.village}</TableCell>
+                        <TableCell>
+                          {screening.images && screening.images.length > 0 ? (
+                            <div className="flex items-center gap-1">
+                              <ImageIcon className="h-4 w-4" />
+                              <span>{screening.images.length}</span>
+                            </div>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                        {canEdit && (
+                          <TableCell>
+                            <EditableEntry
+                              data={screening}
+                              onSave={(updatedData) => handleUpdateScreening(screening.id, updatedData)}
+                              title="Child Screening"
+                              fieldConfig={[
+                                { name: "name", label: "Name", type: "text" },
+                                { name: "father", label: "Father's Name", type: "text" },
+                                { name: "age", label: "Age (Months)", type: "number" },
+                                { name: "muac", label: "MUAC (cm)", type: "number" },
+                                { name: "village", label: "Village", type: "text" },
+                                { name: "unionCouncil", label: "Union Council", type: "text" },
+                                { name: "district", label: "District", type: "text" },
+                                { name: "remarks", label: "Remarks", type: "text" },
+                                { name: "images", label: "Images", type: "images" }
+                              ]}
+                            />
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="rounded-full bg-muted p-3 mb-4">
+                  <FileSpreadsheet className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-medium">No screenings today</h3>
+                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                  Start adding new screenings to see them appear here.
+                </p>
               </div>
             )}
           </CardContent>

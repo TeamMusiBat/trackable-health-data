@@ -21,10 +21,13 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
+import { ImageCapture } from "@/components/ImageCapture";
+import { EditableEntry } from "@/components/EditableEntry";
 import { Navigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
-import { FileSpreadsheet, Plus, X, Map, Building } from "lucide-react";
+import { FileSpreadsheet, Plus, X, Map, Building, Wifi, WifiOff, Image as ImageIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AwarenessSessionData } from "@/lib/types";
 
@@ -37,6 +40,7 @@ interface SessionFormData {
   age: number | string;
   underFiveChildren: number | string;
   contactNumber: string;
+  images?: string[];
 }
 
 interface AwarenessSessionProps {
@@ -52,11 +56,12 @@ const initialFormState: SessionFormData = {
   age: "",
   underFiveChildren: "",
   contactNumber: "",
+  images: [],
 };
 
 const AwarenessSession = ({ type }: AwarenessSessionProps) => {
-  const { isAuthenticated } = useAuth();
-  const { awarenessSessionsFMT, awarenessSessionsSM, addAwarenessSession, bulkAddAwarenessSession, exportData } = useData();
+  const { isAuthenticated, currentUser } = useAuth();
+  const { awarenessSessionsFMT, awarenessSessionsSM, addAwarenessSession, bulkAddAwarenessSession, updateAwarenessSession, exportData, isOnline } = useData();
 
   const sessionType = type === "fmt" ? "FMT" : "Social Mobilizers";
   const pageTitle = `${sessionType} Awareness Sessions`;
@@ -125,6 +130,13 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
         }
       }
     }
+  };
+
+  const handleImagesChange = (images: string[]) => {
+    setFormData(prev => ({
+      ...prev,
+      images
+    }));
   };
 
   const handleAddToBulk = () => {
@@ -256,6 +268,12 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
     exportData(type === 'fmt' ? 'fmt' : 'sm', filter);
   };
 
+  const handleUpdateSession = (id: string, updatedData: Partial<AwarenessSessionData>) => {
+    updateAwarenessSession(id, updatedData);
+  };
+
+  const canEdit = currentUser?.role === 'admin' || currentUser?.role === 'developer';
+
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
@@ -286,6 +304,20 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
               <FileSpreadsheet className="mr-2 h-4 w-4" />
               Export All
             </Button>
+          </div>
+        </div>
+        
+        {/* Online/Offline Status Banner */}
+        <div className={`mb-2 p-2 rounded-lg border ${isOnline ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800'}`}>
+          <div className="flex items-center gap-2">
+            {isOnline ? (
+              <Wifi className="text-green-600 dark:text-green-400 h-4 w-4" />
+            ) : (
+              <WifiOff className="text-amber-600 dark:text-amber-400 h-4 w-4" />
+            )}
+            <div className="text-sm font-medium">
+              {isOnline ? "Online - Data will be synced automatically" : "Offline - Data will be saved locally"}
+            </div>
           </div>
         </div>
         
@@ -436,6 +468,11 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
                       />
                     </div>
                     
+                    <div className="space-y-2">
+                      <Label>Session Images</Label>
+                      <ImageCapture onImagesChange={handleImagesChange} />
+                    </div>
+                    
                     <div className="flex gap-2 pt-4">
                       <Button type="button" onClick={handleAddToBulk} className="flex-1">
                         <Plus className="mr-2 h-4 w-4" />
@@ -473,6 +510,7 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
                             <TableHead>Father/Husband</TableHead>
                             <TableHead>Age</TableHead>
                             <TableHead>Village</TableHead>
+                            <TableHead>Images</TableHead>
                             <TableHead className="w-[100px]">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -484,6 +522,7 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
                               <TableCell>{entry.fatherOrHusband}</TableCell>
                               <TableCell>{entry.age}</TableCell>
                               <TableCell>{entry.villageName}</TableCell>
+                              <TableCell>{entry.images?.length || 0}</TableCell>
                               <TableCell>
                                 <Button
                                   variant="ghost"
@@ -538,10 +577,10 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
                           <TableHead>Name</TableHead>
                           <TableHead>Father/Husband</TableHead>
                           <TableHead>Age</TableHead>
-                          <TableHead>Under 5 Children</TableHead>
+                          <TableHead>Under 5</TableHead>
                           <TableHead>Village</TableHead>
-                          <TableHead>UC</TableHead>
-                          <TableHead>Contact</TableHead>
+                          <TableHead>Images</TableHead>
+                          {canEdit && <TableHead>Actions</TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -553,8 +592,35 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
                             <TableCell>{session.age}</TableCell>
                             <TableCell>{session.underFiveChildren}</TableCell>
                             <TableCell>{session.villageName}</TableCell>
-                            <TableCell>{session.ucName}</TableCell>
-                            <TableCell>{session.contactNumber || "-"}</TableCell>
+                            <TableCell>
+                              {session.images && session.images.length > 0 ? (
+                                <div className="flex items-center gap-1">
+                                  <ImageIcon className="h-4 w-4" />
+                                  <span>{session.images.length}</span>
+                                </div>
+                              ) : (
+                                "-"
+                              )}
+                            </TableCell>
+                            {canEdit && (
+                              <TableCell>
+                                <EditableEntry
+                                  data={session}
+                                  onSave={(updatedData) => handleUpdateSession(session.id, updatedData)}
+                                  title="Awareness Session"
+                                  fieldConfig={[
+                                    { name: "name", label: "Name", type: "text" },
+                                    { name: "fatherOrHusband", label: "Father/Husband Name", type: "text" },
+                                    { name: "age", label: "Age", type: "number" },
+                                    { name: "underFiveChildren", label: "Under Five Children", type: "number" },
+                                    { name: "contactNumber", label: "Contact Number", type: "text" },
+                                    { name: "villageName", label: "Village", type: "text" },
+                                    { name: "ucName", label: "UC Name", type: "text" },
+                                    { name: "images", label: "Images", type: "images" }
+                                  ]}
+                                />
+                              </TableCell>
+                            )}
                           </TableRow>
                         ))}
                       </TableBody>

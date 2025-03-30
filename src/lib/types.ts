@@ -1,55 +1,68 @@
 
-export type UserRole = 'developer' | 'master' | 'user';
-
-export interface User {
+// Base entry types
+export interface BaseEntry {
   id: string;
-  username: string;
-  password: string; // This should be hashed in a real implementation
-  role: UserRole;
-  online?: boolean;
-  lastActive?: Date;
-  location?: {
-    latitude: number;
-    longitude: number;
-  };
+  userId: string;
+  synced: boolean;
+  date: Date;
 }
 
-export interface ChildScreeningData {
-  id: string;
+// Child screening data
+export interface ChildScreeningData extends BaseEntry {
   serialNo: number;
-  date: Date;
   name: string;
   father: string;
   age: number;
+  gender: string;
   muac: number;
-  gender: 'Male' | 'Female' | 'Other';
   district: string;
   unionCouncil: string;
   village: string;
   vaccination: string;
   dueVaccine: boolean;
   remarks: string;
-  userId: string;
-  synced: boolean;
+  images?: string[]; // Add images field
 }
 
-export interface AwarenessSessionData {
-  id: string;
-  type: 'FMT' | 'Social Mobilizers';
+// Awareness session data
+export interface AwarenessSessionData extends BaseEntry {
   serialNo: number;
   name: string;
   fatherOrHusband: string;
-  date: Date;
+  age: number;
   villageName: string;
   ucName: string;
-  age: number;
   underFiveChildren: number;
   contactNumber: string;
-  userId: string;
-  synced: boolean;
+  type: 'FMT' | 'Social Mobilizers';
+  images?: string[]; // Add images field
 }
 
+// User types
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'fieldworker' | 'developer';
+  active: boolean;
+}
+
+// Duplicate entry check result
 export interface DuplicateEntry {
   exists: boolean;
-  data?: ChildScreeningData | AwarenessSessionData;
+  data?: ChildScreeningData;
+}
+
+// Export options
+export interface ExportOptions {
+  filterSam?: boolean;
+  filterMam?: boolean;
+  type?: string;
+  title?: string;
+}
+
+// Editable record marker
+export interface EditableRecord {
+  isEditing: boolean;
+  originalData: any;
 }

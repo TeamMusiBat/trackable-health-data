@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { FieldWorkerMap } from './FieldWorkerMap';
 import { GlobeView } from './GlobeView';
+import { GoogleMapLink } from './GoogleMapLink';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Button } from './ui/button';
 import { RefreshCw, Map, Globe } from 'lucide-react';
@@ -79,6 +80,7 @@ export const LocationsModal: React.FC<LocationsModalProps> = ({
                   <TableHead>Name</TableHead>
                   <TableHead>Coordinates</TableHead>
                   <TableHead>Last Active</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -91,6 +93,13 @@ export const LocationsModal: React.FC<LocationsModalProps> = ({
                       </span>
                     </TableCell>
                     <TableCell>{location.lastActive}</TableCell>
+                    <TableCell>
+                      <GoogleMapLink 
+                        latitude={location.latitude} 
+                        longitude={location.longitude} 
+                        name={location.name} 
+                      />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
