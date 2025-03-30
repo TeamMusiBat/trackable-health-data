@@ -79,6 +79,10 @@ export interface ExportOptions {
   type?: string;
   title?: string;
   workerSplit?: boolean;
+  removeWorkerId?: boolean; // Add option to remove worker ID column
+  removeImagesColumn?: boolean; // Add option to remove images column
+  pakistaniTime?: boolean; // Add option for Pakistani time
+  removeDuplicates?: boolean; // Add option to remove duplicate entries
 }
 
 // Editable record marker

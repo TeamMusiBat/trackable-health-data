@@ -1,6 +1,5 @@
-
 import * as XLSX from 'xlsx';
-import { ChildScreeningData, AwarenessSessionData } from '@/lib/types';
+import { ChildScreeningData, AwarenessSessionData, ExportOptions } from '@/lib/types';
 
 // Apply styling to Excel headers
 const applyHeaderStyle = (worksheet: XLSX.WorkSheet): void => {
@@ -20,7 +19,7 @@ const applyHeaderStyle = (worksheet: XLSX.WorkSheet): void => {
     // Apply bold, center alignment, fill color
     cell.s = {
       ...cell.s,
-      font: { bold: true },
+      font: { bold: true, sz: 12 }, // Slightly larger than data text
       alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
       fill: { fgColor: { rgb: 'E1E1E1' } },
       border: {
@@ -126,7 +125,7 @@ const setColumnWidths = (worksheet: XLSX.WorkSheet): void => {
   }
 };
 
-// Add title to worksheet
+// Add title to worksheet with improved formatting
 const addTitle = (worksheet: XLSX.WorkSheet, title: string): void => {
   // Get column range
   const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
@@ -159,14 +158,15 @@ const addTitle = (worksheet: XLSX.WorkSheet, title: string): void => {
     newWorksheet['!cols'] = worksheet['!cols'];
   }
   
-  // Add title cell
+  // Add title cell with enhanced styling
   const titleCell = XLSX.utils.encode_cell({ r: 0, c: 0 });
   newWorksheet[titleCell] = { 
     v: title, 
     t: 's',
     s: {
-      font: { bold: true, sz: 16 },
-      alignment: { horizontal: 'center', vertical: 'center' }
+      font: { bold: true, sz: 16 }, // Larger font for title
+      alignment: { horizontal: 'center', vertical: 'center' },
+      fill: { fgColor: { rgb: 'F1F0FB' } }, // Light background for title
     }
   };
   
@@ -178,6 +178,37 @@ const addTitle = (worksheet: XLSX.WorkSheet, title: string): void => {
   Object.assign(worksheet, newWorksheet);
 };
 
+// Remove duplicate entries from data array
+const removeDuplicates = <T extends { name: string, date: Date }>(data: T[]): T[] => {
+  const uniqueMap = new Map<string, T>();
+  
+  data.forEach(item => {
+    const dateString = new Date(item.date).toDateString();
+    const key = `${item.name}_${dateString}`;
+    
+    // If this is the first entry with this key, or we prefer to keep this one
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, item);
+    }
+  });
+  
+  return Array.from(uniqueMap.values());
+};
+
+// Convert date to Pakistani time format
+const formatDateToPakistani = (date: Date): string => {
+  const options: Intl.DateTimeFormatOptions = { 
+    year: 'numeric', 
+    month: 'numeric', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Karachi'
+  };
+  
+  return new Date(date).toLocaleString('en-PK', options);
+};
+
 // Export child screening data to Excel
 export const exportChildScreeningToExcel = (
   data: ChildScreeningData[],
@@ -187,10 +218,18 @@ export const exportChildScreeningToExcel = (
     filterMam?: boolean;
     workerSplit?: boolean;
     title?: string;
+    removeWorkerId?: boolean;
+    removeImagesColumn?: boolean;
+    pakistaniTime?: boolean;
+    removeDuplicates?: boolean;
   } = {}
 ): void => {
-  // Apply filters
+  // Apply filters and remove duplicates if needed
   let filteredData = [...data];
+  
+  if (options.removeDuplicates) {
+    filteredData = removeDuplicates(filteredData);
+  }
   
   if (options.filterSam && !options.filterMam) {
     filteredData = filteredData.filter(item => item.muac <= 11);
@@ -215,22 +254,35 @@ export const exportChildScreeningToExcel = (
     
     // Create sheet for each user
     Object.entries(userGroups).forEach(([userId, userData]) => {
-      const sheetData = userData.map(item => ({
-        'Serial No': item.serialNo,
-        'Date': new Date(item.date).toLocaleDateString(),
-        'Child Name': item.name,
-        'Father Name': item.father,
-        'Age (months)': item.age,
-        'MUAC': item.muac,
-        'Gender': item.gender,
-        'District': item.district,
-        'Union Council': item.unionCouncil,
-        'Village': item.village,
-        'Vaccination': item.vaccination,
-        'Due Vaccine': item.dueVaccine ? 'Yes' : 'No',
-        'Remarks': item.remarks,
-        'Images': item.images && item.images.length > 0 ? `${item.images.length} images` : "None"
-      }));
+      const sheetData = userData.map(item => {
+        // Base data object
+        const rowData: Record<string, any> = {
+          'Serial No': item.serialNo,
+          'Date': options.pakistaniTime ? formatDateToPakistani(item.date) : new Date(item.date).toLocaleDateString(),
+          'Child Name': item.name,
+          'Father Name': item.father,
+          'Age (months)': item.age,
+          'MUAC': item.muac,
+          'Gender': item.gender,
+          'District': item.district,
+          'Union Council': item.unionCouncil,
+          'Village': item.village,
+          'Vaccination': item.vaccination,
+          'Due Vaccine': item.dueVaccine ? 'Yes' : 'No',
+          'Remarks': item.remarks
+        };
+        
+        // Add optional columns
+        if (!options.removeWorkerId) {
+          rowData['Worker ID'] = item.userId;
+        }
+        
+        if (!options.removeImagesColumn) {
+          rowData['Images'] = item.images && item.images.length > 0 ? `${item.images.length} images` : "None";
+        }
+        
+        return rowData;
+      });
       
       // Create worksheet
       const ws = XLSX.utils.json_to_sheet(sheetData);
@@ -241,7 +293,7 @@ export const exportChildScreeningToExcel = (
       setColumnWidths(ws);
       
       // Add title
-      const title = options.title || `Field Worker ${userId} - Child Screening Data`;
+      const title = options.title || `Research Assistant ${userId} - Child Screening Data`;
       addTitle(ws, title);
       
       // Add to workbook
@@ -249,23 +301,35 @@ export const exportChildScreeningToExcel = (
     });
   } else {
     // Create single sheet with all data
-    const sheetData = filteredData.map(item => ({
-      'Serial No': item.serialNo,
-      'Date': new Date(item.date).toLocaleDateString(),
-      'Child Name': item.name,
-      'Father Name': item.father,
-      'Age (months)': item.age,
-      'MUAC': item.muac,
-      'Gender': item.gender,
-      'District': item.district,
-      'Union Council': item.unionCouncil,
-      'Village': item.village,
-      'Vaccination': item.vaccination,
-      'Due Vaccine': item.dueVaccine ? 'Yes' : 'No',
-      'Remarks': item.remarks,
-      'Worker ID': item.userId,
-      'Images': item.images && item.images.length > 0 ? `${item.images.length} images` : "None"
-    }));
+    const sheetData = filteredData.map(item => {
+      // Base data object
+      const rowData: Record<string, any> = {
+        'Serial No': item.serialNo,
+        'Date': options.pakistaniTime ? formatDateToPakistani(item.date) : new Date(item.date).toLocaleDateString(),
+        'Child Name': item.name,
+        'Father Name': item.father,
+        'Age (months)': item.age,
+        'MUAC': item.muac,
+        'Gender': item.gender,
+        'District': item.district,
+        'Union Council': item.unionCouncil,
+        'Village': item.village,
+        'Vaccination': item.vaccination,
+        'Due Vaccine': item.dueVaccine ? 'Yes' : 'No',
+        'Remarks': item.remarks
+      };
+      
+      // Add optional columns
+      if (!options.removeWorkerId) {
+        rowData['Worker ID'] = item.userId;
+      }
+      
+      if (!options.removeImagesColumn) {
+        rowData['Images'] = item.images && item.images.length > 0 ? `${item.images.length} images` : "None";
+      }
+      
+      return rowData;
+    });
     
     // Create worksheet
     const ws = XLSX.utils.json_to_sheet(sheetData);
@@ -302,29 +366,48 @@ export const exportAwarenessSessionToExcel = (
     fileName?: string;
     title?: string;
     type?: 'FMT' | 'Social Mobilizers';
+    removeWorkerId?: boolean;
+    removeImagesColumn?: boolean;
+    pakistaniTime?: boolean;
+    removeDuplicates?: boolean;
   } = {}
 ): void => {
-  // Filter by type if needed
-  const filteredData = options.type ? data.filter(item => item.type === options.type) : data;
+  // Filter by type if needed and remove duplicates if requested
+  let filteredData = options.type ? data.filter(item => item.type === options.type) : data;
+  
+  if (options.removeDuplicates) {
+    filteredData = removeDuplicates(filteredData);
+  }
   
   // Create workbook
   const wb = XLSX.utils.book_new();
   
   // Create single sheet with all data
-  const sheetData = filteredData.map(item => ({
-    'Serial No': item.serialNo,
-    'Date': new Date(item.date).toLocaleDateString(),
-    'Name': item.name,
-    'Father/Husband': item.fatherOrHusband,
-    'Age': item.age,
-    'Under Five Children': item.underFiveChildren,
-    'Village': item.villageName,
-    'Union Council': item.ucName,
-    'Contact Number': item.contactNumber,
-    'Type': item.type,
-    'Worker ID': item.userId,
-    'Images': item.images && item.images.length > 0 ? `${item.images.length} images` : "None"
-  }));
+  const sheetData = filteredData.map(item => {
+    // Base data object
+    const rowData: Record<string, any> = {
+      'Date': options.pakistaniTime ? formatDateToPakistani(item.date) : new Date(item.date).toLocaleDateString(),
+      'Name': item.name,
+      'Father/Husband': item.fatherOrHusband,
+      'Age': item.age,
+      'Under Five Children': item.underFiveChildren,
+      'Village': item.villageName,
+      'Union Council': item.ucName,
+      'Contact Number': item.contactNumber,
+      'Type': item.type
+    };
+    
+    // Add optional columns
+    if (!options.removeWorkerId) {
+      rowData['Worker ID'] = item.userId;
+    }
+    
+    if (!options.removeImagesColumn) {
+      rowData['Images'] = item.images && item.images.length > 0 ? `${item.images.length} images` : "None";
+    }
+    
+    return rowData;
+  });
   
   // Create worksheet
   const ws = XLSX.utils.json_to_sheet(sheetData);

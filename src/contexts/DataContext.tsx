@@ -457,7 +457,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         filterSam: filter === 'sam',
         filterMam: filter === 'mam',
         workerSplit: options?.workerSplit,
-        title: title
+        title: title,
+        removeWorkerId: options?.removeWorkerId,
+        removeImagesColumn: options?.removeImagesColumn,
+        pakistaniTime: options?.pakistaniTime,
+        removeDuplicates: options?.removeDuplicates
       });
       
       toast({
@@ -478,7 +482,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       exportAwarenessSessionToExcel(filteredData, {
         type: 'FMT',
-        title: title
+        title: title,
+        removeWorkerId: options?.removeWorkerId,
+        removeImagesColumn: options?.removeImagesColumn,
+        pakistaniTime: options?.pakistaniTime,
+        removeDuplicates: options?.removeDuplicates
       });
       
       toast({
@@ -499,7 +507,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       exportAwarenessSessionToExcel(filteredData, {
         type: 'Social Mobilizers',
-        title: title
+        title: title,
+        removeWorkerId: options?.removeWorkerId,
+        removeImagesColumn: options?.removeImagesColumn,
+        pakistaniTime: options?.pakistaniTime,
+        removeDuplicates: options?.removeDuplicates
       });
       
       toast({

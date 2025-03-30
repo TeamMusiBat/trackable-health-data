@@ -17,7 +17,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FileSpreadsheet, Calendar, CalendarDays, Users, Image } from 'lucide-react';
+import { FileSpreadsheet, Calendar, Users, Image } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
 
 interface ExportModalProps {
@@ -33,6 +33,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({ open, onOpenChange }) 
     mamOnly: false,
     splitByWorker: false,
     includeImages: false,
+    removeDuplicates: true,  // Enable by default to avoid duplicate entries
+    removeWorkerId: true,    // Enable by default to remove Worker ID
+    removeImagesColumn: true, // Enable by default to remove Images column
+    pakistaniTime: true,     // Enable by default to use Pakistani time
     timeRange: 'today' as 'today' | 'all',
   });
 
@@ -49,7 +53,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({ open, onOpenChange }) 
     
     exportData(type, filter, {
       includeImages: exportOptions.includeImages,
-      workerSplit: exportOptions.splitByWorker
+      workerSplit: exportOptions.splitByWorker,
+      removeWorkerId: exportOptions.removeWorkerId,
+      removeImagesColumn: exportOptions.removeImagesColumn,
+      pakistaniTime: exportOptions.pakistaniTime,
+      removeDuplicates: exportOptions.removeDuplicates
     });
     onOpenChange(false);
   };
@@ -123,7 +131,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ open, onOpenChange }) 
                   checked={exportOptions.splitByWorker}
                   onCheckedChange={(checked) => setExportOptions({...exportOptions, splitByWorker: !!checked})}
                 />
-                <Label htmlFor="split" className="cursor-pointer">Split by field worker</Label>
+                <Label htmlFor="split" className="cursor-pointer">Split by research assistant</Label>
               </div>
               
               <div className="flex items-center space-x-2">
@@ -136,6 +144,15 @@ export const ExportModal: React.FC<ExportModalProps> = ({ open, onOpenChange }) 
                   <Image className="h-4 w-4 mr-1" />
                   Export images separately
                 </Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="removeDuplicates" 
+                  checked={exportOptions.removeDuplicates}
+                  onCheckedChange={(checked) => setExportOptions({...exportOptions, removeDuplicates: !!checked})}
+                />
+                <Label htmlFor="removeDuplicates" className="cursor-pointer">Remove duplicate entries</Label>
               </div>
             </div>
             
@@ -180,6 +197,15 @@ export const ExportModal: React.FC<ExportModalProps> = ({ open, onOpenChange }) 
               </Label>
             </div>
             
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="fmt-removeDuplicates" 
+                checked={exportOptions.removeDuplicates}
+                onCheckedChange={(checked) => setExportOptions({...exportOptions, removeDuplicates: !!checked})}
+              />
+              <Label htmlFor="fmt-removeDuplicates" className="cursor-pointer">Remove duplicate entries</Label>
+            </div>
+            
             <Button className="w-full" onClick={() => handleExport('fmt')}>
               <FileSpreadsheet className="mr-2 h-4 w-4" />
               Export FMT Sessions Data
@@ -219,6 +245,15 @@ export const ExportModal: React.FC<ExportModalProps> = ({ open, onOpenChange }) 
                 <Image className="h-4 w-4 mr-1" />
                 Export images separately
               </Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="sm-removeDuplicates" 
+                checked={exportOptions.removeDuplicates}
+                onCheckedChange={(checked) => setExportOptions({...exportOptions, removeDuplicates: !!checked})}
+              />
+              <Label htmlFor="sm-removeDuplicates" className="cursor-pointer">Remove duplicate entries</Label>
             </div>
             
             <Button className="w-full" onClick={() => handleExport('sm')}>
