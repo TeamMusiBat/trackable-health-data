@@ -8,7 +8,8 @@ import {
   Phone,
   Map,
   MapPin,
-  Globe
+  Globe,
+  Syringe
 } from "lucide-react";
 
 export {
@@ -19,5 +20,6 @@ export {
   Phone,
   Map,
   MapPin,
-  Globe
+  Globe,
+  Syringe
 };

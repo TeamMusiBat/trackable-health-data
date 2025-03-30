@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
 import { LocationsModal } from "@/components/LocationsModal";
 import { Avatar, AvatarFallback } from "./ui/avatar";
-import { MapPin, Menu, X, LogOut, Home, Users, BarChart3, Vaccine, UserCheck } from "lucide-react";
+import { MapPin, Menu, X, LogOut, Home, Users, BarChart3, Syringe, UserCheck } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   NavigationMenu,
@@ -49,7 +48,6 @@ export function Header() {
   };
 
   const handleShowLocations = () => {
-    // In a real app, this would fetch from an API
     const mockLocations = [
       {
         name: "John Doe",
@@ -80,14 +78,12 @@ export function Header() {
   };
   
   const refreshLocations = () => {
-    // This would normally fetch fresh data from an API
-    // Simulating a refresh with slight location changes
     const refreshedLocations = locations.map(loc => ({
       ...loc,
       latitude: loc.latitude + (Math.random() * 0.004 - 0.002),
       longitude: loc.longitude + (Math.random() * 0.004 - 0.002),
       lastActive: "Just now",
-      accuracy: Math.floor(Math.random() * 10) + 1 // Random accuracy between 1-10 meters
+      accuracy: Math.floor(Math.random() * 10) + 1
     }));
     
     setLocations(refreshedLocations);
@@ -113,7 +109,6 @@ export function Header() {
         <div className="flex items-center gap-2">
           <ThemeToggle />
           
-          {/* Desktop Navigation */}
           {isAuthenticated && !isMobile && (
             <NavigationMenu>
               <NavigationMenuList>
@@ -197,7 +192,6 @@ export function Header() {
                 {syncLoading ? "Syncing..." : "Sync Data"}
               </Button>
               
-              {/* User Avatar and Logout */}
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback>{currentUser?.name?.[0] || "U"}</AvatarFallback>
@@ -214,7 +208,6 @@ export function Header() {
                 )}
               </div>
               
-              {/* Mobile Menu Toggle */}
               {isMobile && (
                 <Button
                   variant="ghost"
@@ -236,7 +229,6 @@ export function Header() {
         </div>
       </div>
       
-      {/* Mobile Menu */}
       {isMobile && mobileMenuOpen && isAuthenticated && (
         <div className="container pb-4 px-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b animate-fade-in">
           <nav className="flex flex-col space-y-2 pt-2">
@@ -254,7 +246,7 @@ export function Header() {
               className="flex items-center gap-2 p-2 rounded-md hover:bg-accent"
               onClick={closeMobileMenu}
             >
-              <Vaccine className="h-4 w-4" />
+              <Syringe className="h-4 w-4" />
               <span>Child Screening</span>
             </Link>
             
