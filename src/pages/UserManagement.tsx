@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
@@ -371,7 +370,7 @@ const UserManagement = () => {
                       <Label htmlFor="role">Role</Label>
                       <Select
                         value={newUser.role}
-                        onValueChange={(value) => setNewUser({ ...newUser, role: value })}
+                        onValueChange={(value: UserRole) => setNewUser({ ...newUser, role: value as UserRole })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select role" />
@@ -383,6 +382,27 @@ const UserManagement = () => {
                           <SelectItem value="user">Field Worker</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name</Label>
+                      <Input
+                        id="name"
+                        value={newUser.name}
+                        onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                        required
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={newUser.email}
+                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                        required
+                      />
                     </div>
                   </form>
                 </CardContent>
