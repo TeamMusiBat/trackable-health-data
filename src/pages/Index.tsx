@@ -1,9 +1,11 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { ArrowRight, CheckCircle } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -13,26 +15,49 @@ const Index = () => {
     <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-1">
-        <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48">
+        <section className="w-full py-12 md:py-24 lg:py-32 xl:py-40">
           <div className="container px-4 md:px-6">
             <div className="grid gap-6 lg:grid-cols-2 lg:gap-12 items-center">
               <div className="space-y-4">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
-                  Track4Health
-                </h1>
+                <div className="space-y-2">
+                  <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
+                    Track4Health
+                  </h1>
+                  <p className="text-primary text-lg font-medium">
+                    Monitor. Improve. Thrive.
+                  </p>
+                </div>
                 <p className="max-w-[600px] text-gray-500 md:text-xl dark:text-gray-400">
-                  A comprehensive health tracking system for field workers.
-                  Monitor child nutrition, vaccination status, and community
-                  awareness sessions.
+                  A comprehensive health record management system designed to improve accuracy and efficiency of child screening, immunization tracking, and community awareness sessions.
                 </p>
-                <div className="flex flex-col gap-2 min-[400px]:flex-row">
+                <ul className="space-y-2">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary" />
+                    <span>Digital health record management</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary" />
+                    <span>Structured & automated data processing</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary" />
+                    <span>Smart export system with filtering</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary" />
+                    <span>Works offline with automatic sync</span>
+                  </li>
+                </ul>
+                <div className="flex flex-col gap-2 min-[400px]:flex-row pt-2">
                   {isAuthenticated ? (
-                    <Button onClick={() => navigate("/dashboard")}>
+                    <Button onClick={() => navigate("/dashboard")} className="flex items-center gap-2">
                       Go to Dashboard
+                      <ArrowRight className="h-4 w-4" />
                     </Button>
                   ) : (
-                    <Button onClick={() => navigate("/login")}>
+                    <Button onClick={() => navigate("/login")} className="flex items-center gap-2">
                       Login to System
+                      <ArrowRight className="h-4 w-4" />
                     </Button>
                   )}
                 </div>

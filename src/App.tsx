@@ -17,7 +17,14 @@ import NotFound from "@/pages/NotFound";
 import { RequireAuth } from '@/components/RequireAuth';
 
 function App() {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        refetchOnWindowFocus: false,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+      },
+    },
+  }));
 
   return (
     <QueryClientProvider client={queryClient}>

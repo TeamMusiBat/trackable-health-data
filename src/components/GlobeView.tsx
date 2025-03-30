@@ -7,6 +7,7 @@ interface Location {
   latitude: number;
   longitude: number;
   lastActive: string;
+  accuracy?: number;
 }
 
 interface GlobeViewProps {
@@ -47,29 +48,50 @@ export const GlobeView: React.FC<GlobeViewProps> = ({ locations }) => {
           const x = 50 + 40 * Math.sin(phi) * Math.cos(theta);
           const y = 50 + 40 * Math.cos(phi);
           
+          // Create marker container
+          const markerContainer = document.createElement('div');
+          markerContainer.className = 'absolute transform -translate-x-1/2 -translate-y-1/2';
+          markerContainer.style.left = `${x}%`;
+          markerContainer.style.top = `${y}%`;
+          
           // Create marker
           const marker = document.createElement('div');
-          marker.className = 'absolute w-3 h-3 bg-red-500 rounded-full transform -translate-x-1/2 -translate-y-1/2 cursor-pointer';
-          marker.style.left = `${x}%`;
-          marker.style.top = `${y}%`;
+          marker.className = 'w-3 h-3 bg-red-500 rounded-full cursor-pointer';
           
           // Pulsing effect
           const pulse = document.createElement('div');
           pulse.className = 'absolute w-3 h-3 bg-red-500 rounded-full animate-ping opacity-75';
           marker.appendChild(pulse);
           
+          // Accuracy circle
+          if (location.accuracy) {
+            const accuracyCircle = document.createElement('div');
+            const size = Math.max(12, location.accuracy / 2);
+            accuracyCircle.className = 'absolute rounded-full bg-red-500/20';
+            accuracyCircle.style.width = `${size}px`;
+            accuracyCircle.style.height = `${size}px`;
+            accuracyCircle.style.transform = 'translate(-50%, -50%)';
+            accuracyCircle.style.left = '50%';
+            accuracyCircle.style.top = '50%';
+            markerContainer.appendChild(accuracyCircle);
+          }
+          
+          markerContainer.appendChild(marker);
+          
           // Tooltip
-          marker.title = `${location.name} (${location.lastActive})`;
+          markerContainer.title = `${location.name} (${location.lastActive})`;
           
           // Click handler
-          marker.addEventListener('click', () => {
+          markerContainer.addEventListener('click', () => {
             toast({
               title: location.name,
-              description: `Location: ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}\nLast active: ${location.lastActive}`,
+              description: `Location: ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}
+                            Last active: ${location.lastActive}
+                            Accuracy: ${location.accuracy ? `±${location.accuracy}m` : 'Unknown'}`,
             });
           });
           
-          globe.appendChild(marker);
+          globe.appendChild(markerContainer);
         });
       } catch (error) {
         console.error('Failed to initialize globe:', error);

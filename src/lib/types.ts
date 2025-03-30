@@ -55,6 +55,7 @@ export interface User {
   location?: {
     latitude: number;
     longitude: number;
+    accuracy?: number; // Added accuracy field for precise location tracking
   };
 }
 

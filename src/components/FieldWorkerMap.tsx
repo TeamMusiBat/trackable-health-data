@@ -8,6 +8,7 @@ interface Location {
   latitude: number;
   longitude: number;
   lastActive: string;
+  accuracy?: number;
 }
 
 interface FieldWorkerMapProps {
@@ -24,7 +25,6 @@ export const FieldWorkerMap: React.FC<FieldWorkerMapProps> = ({ locations }) => 
   }
 
   // In a real implementation, this would use an actual map library like Mapbox, Leaflet, or Google Maps
-  // For now, we'll create a simple visualization that shows markers on a mock map
   return (
     <div className="bg-muted/20 relative rounded-lg h-[300px] border overflow-hidden">
       {/* Mock map background */}
@@ -47,14 +47,35 @@ export const FieldWorkerMap: React.FC<FieldWorkerMapProps> = ({ locations }) => 
             }}
           >
             <div className="flex flex-col items-center">
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-                <MapPin className="h-5 w-5" />
+              <div className="relative">
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
+                  <MapPin className="h-5 w-5" />
+                </div>
+                {location.accuracy && (
+                  <div 
+                    className="absolute -inset-2 rounded-full bg-primary/20 animate-pulse"
+                    style={{ 
+                      width: `${Math.max(32, location.accuracy * 3)}px`,
+                      height: `${Math.max(32, location.accuracy * 3)}px`,
+                      left: '50%',
+                      top: '50%',
+                      transform: 'translate(-50%, -50%)'
+                    }}
+                  ></div>
+                )}
               </div>
               <div className="mt-1 px-2 py-1 bg-background rounded-md text-xs shadow-sm border">
                 {location.name}
-                <Badge variant="outline" className="ml-1 text-[10px]">
-                  {location.lastActive}
-                </Badge>
+                <div className="flex items-center gap-1 mt-1">
+                  <Badge variant="outline" className="text-[10px]">
+                    {location.lastActive}
+                  </Badge>
+                  {location.accuracy && (
+                    <Badge variant="secondary" className="text-[10px]">
+                      ±{location.accuracy}m
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -66,6 +87,10 @@ export const FieldWorkerMap: React.FC<FieldWorkerMapProps> = ({ locations }) => 
         <div className="flex items-center">
           <div className="w-3 h-3 rounded-full bg-primary mr-1"></div>
           <span>Field Worker Location</span>
+        </div>
+        <div className="flex items-center mt-1">
+          <div className="w-3 h-3 rounded-full bg-primary/20 mr-1"></div>
+          <span>Accuracy Radius</span>
         </div>
       </div>
     </div>
