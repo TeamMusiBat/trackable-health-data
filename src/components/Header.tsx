@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -72,7 +73,7 @@ export function Header() {
       }
     ];
     
-    console.info("Field worker locations:", mockLocations);
+    console.info("Research assistant locations:", mockLocations);
     setLocations(mockLocations);
     setShowLocationsModal(true);
   };
@@ -179,7 +180,7 @@ export function Header() {
                 className={`flex items-center gap-1 ${isMobile ? "hidden" : ""}`}
               >
                 <MapPin className="h-4 w-4" />
-                <span className="hidden sm:inline">Field Workers</span>
+                <span className="hidden sm:inline">Research Assistants</span>
               </Button>
               
               <Button
@@ -286,7 +287,7 @@ export function Header() {
                   className="justify-start pl-2"
                 >
                   <MapPin className="h-4 w-4 mr-2" />
-                  <span>Field Workers</span>
+                  <span>Research Assistants</span>
                 </Button>
                 
                 <Button

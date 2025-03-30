@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
 import { Button } from "@/components/ui/button";
@@ -45,7 +44,6 @@ const Dashboard = () => {
   useEffect(() => {
     const today = new Date().toDateString();
     
-    // Calculate stats
     const samCases = childScreening.filter(child => child.muac <= 11).length;
     const mamCases = childScreening.filter(child => child.muac > 11 && child.muac <= 12).length;
     const normalCases = childScreening.filter(child => child.muac > 12).length;
@@ -71,9 +69,7 @@ const Dashboard = () => {
     });
   }, [childScreening, awarenessSessionsFMT, awarenessSessionsSM]);
 
-  // Handle field worker locations view
   const handleViewFieldWorkerLocations = () => {
-    // Simulate location data
     const mockLocations = [
       { name: "John Doe", latitude: 31.5204, longitude: 74.3587, lastActive: "10 minutes ago" },
       { name: "Jane Smith", latitude: 31.5074, longitude: 74.3444, lastActive: "2 hours ago" },
@@ -83,28 +79,23 @@ const Dashboard = () => {
     setFieldWorkerLocations(mockLocations);
     setLocationModalOpen(true);
     
-    console.log("Field worker locations:", mockLocations);
+    console.log("Research assistant locations:", mockLocations);
     
     toast({
       title: "Locations Available",
-      description: `${mockLocations.length} field workers' locations loaded`,
+      description: `${mockLocations.length} research assistants' locations loaded`,
     });
   };
 
-  // Handle WhatsApp contact
   const handleWhatsAppContact = () => {
     window.open("https://wa.me/923032939576", "_blank");
   };
 
-  // Handle export actions
   const handleExportScreening = (filter: 'today' | 'all' | 'sam' | 'mam' = 'today') => {
     exportData('child', filter);
   };
 
-  // Navigate to view SAM/MAM cases 
   const handleViewSamMamCases = () => {
-    // In a real app, this might navigate to a dedicated page
-    // For now, we'll just show a summary
     const samMamCases = childScreening.filter(child => child.muac <= 12);
     
     toast({
@@ -126,7 +117,7 @@ const Dashboard = () => {
           <h1 className="text-3xl font-bold mb-2">Welcome, {currentUser?.username}</h1>
           <p className="text-muted-foreground">
             {currentUser?.role === 'developer' ? 'Super Admin' : 
-             currentUser?.role === 'master' ? 'Master User' : 'Field Worker'} Dashboard
+             currentUser?.role === 'master' ? 'Master User' : 'Research Assistant'} Dashboard
           </p>
           
           {stats.unsyncedCount > 0 && (
@@ -325,11 +316,10 @@ const Dashboard = () => {
                     onClick={handleViewFieldWorkerLocations}
                   >
                     <Map className="mr-2 h-4 w-4" />
-                    View Field Worker Locations
+                    View Research Assistant Locations
                   </Button>
                 )}
                 
-                {/* WhatsApp Contact Button - Available to all users */}
                 <Button 
                   className="w-full justify-start" 
                   variant="outline"

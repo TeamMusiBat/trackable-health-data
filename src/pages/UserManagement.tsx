@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
@@ -115,6 +116,7 @@ const UserManagement = () => {
     role: "user" as UserRole,
     name: "",
     email: "",
+    phone: "",
     active: true
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -126,10 +128,10 @@ const UserManagement = () => {
     currentUser?.role === "developer" || currentUser?.role === "master";
 
   const addUser = () => {
-    if (!newUser.username || !newUser.password || !newUser.name || !newUser.email) {
+    if (!newUser.username || !newUser.password || !newUser.name) {
       toast({
         title: "Missing information",
-        description: "Username, password, name and email are required",
+        description: "Username, password, and name are required",
         variant: "destructive",
       });
       return;
@@ -151,9 +153,10 @@ const UserManagement = () => {
       username: newUser.username,
       password: newUser.password,
       name: newUser.name,
-      email: newUser.email,
+      email: newUser.email || undefined, // Make email optional
+      phone: newUser.phone || undefined, // Make phone optional
       active: true,
-      role: newUser.role, // This is now correctly typed as UserRole
+      role: newUser.role,
       online: false,
       lastActive: new Date(),
     };
@@ -167,6 +170,7 @@ const UserManagement = () => {
       role: "user" as UserRole,
       name: "",
       email: "",
+      phone: "",
       active: true
     });
 
@@ -199,14 +203,14 @@ const UserManagement = () => {
   const refreshLocations = () => {
     toast({
       title: "Refreshing locations",
-      description: "Field worker locations are being updated",
+      description: "Research Assistant locations are being updated",
     });
     
     // In a real app, this would fetch the latest location data from the server
     setTimeout(() => {
       toast({
         title: "Locations updated",
-        description: "Field worker locations have been updated",
+        description: "Research Assistant locations have been updated",
       });
     }, 1500);
   };
@@ -287,7 +291,7 @@ const UserManagement = () => {
                               }>
                                 {user.role === "developer" ? "Super Admin" :
                                  user.role === "master" ? "Master" :
-                                 "Field Worker"}
+                                 "Research Assistant"}
                               </Badge>
                             </TableCell>
                             <TableCell>
@@ -379,7 +383,7 @@ const UserManagement = () => {
                           {currentUser?.role === "developer" && (
                             <SelectItem value="master">Master</SelectItem>
                           )}
-                          <SelectItem value="user">Field Worker</SelectItem>
+                          <SelectItem value="user">Research Assistant</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -395,13 +399,22 @@ const UserManagement = () => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
+                      <Label htmlFor="email">Email (Optional)</Label>
                       <Input
                         id="email"
                         type="email"
                         value={newUser.email}
                         onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                        required
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number (Optional)</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={newUser.phone}
+                        onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
                       />
                     </div>
                   </form>
@@ -420,9 +433,9 @@ const UserManagement = () => {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Field Worker Locations</CardTitle>
+                  <CardTitle>Research Assistant Locations</CardTitle>
                   <CardDescription>
-                    Track the real-time location of field workers
+                    Track the real-time location of research assistants
                   </CardDescription>
                 </div>
                 <Button variant="outline" onClick={refreshLocations}>
@@ -435,7 +448,7 @@ const UserManagement = () => {
                   <div className="absolute inset-0 flex items-center justify-center">
                     {/* This would be an actual map in a real implementation */}
                     <div className="text-muted-foreground">
-                      Map view would display here with real-time worker locations
+                      Map view would display here with real-time research assistant locations
                     </div>
                   </div>
                   
@@ -453,7 +466,7 @@ const UserManagement = () => {
                 </div>
                 
                 <div className="mt-6">
-                  <h3 className="font-medium mb-4">Worker Status</h3>
+                  <h3 className="font-medium mb-4">Research Assistant Status</h3>
                   <div className="rounded-md border overflow-hidden">
                     <Table>
                       <TableHeader>
