@@ -1,3 +1,4 @@
+
 import * as XLSX from 'xlsx';
 import { ChildScreeningData, AwarenessSessionData } from '@/lib/types';
 
@@ -49,23 +50,29 @@ const applyMuacFormatting = (worksheet: XLSX.WorkSheet, dataRows: ChildScreening
   
   if (muacColIndex === -1) return; // MUAC column not found
   
-  // Apply color based on MUAC value
+  // Apply color based on MUAC value to entire row
   dataRows.forEach((row, idx) => {
     const rowIndex = idx + 1; // +1 to skip header row
-    const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: muacColIndex });
-    const cell = worksheet[cellAddress];
-    if (!cell) return;
     
-    // Create or get existing style object
-    if (!cell.s) cell.s = {};
+    let bgColor = 'CCFFCC'; // Light green for normal (default)
     
-    // Apply color based on MUAC value
     if (row.muac <= 11) { // SAM
-      cell.s.fill = { fgColor: { rgb: 'FF9999' } }; // Light red for SAM
+      bgColor = 'FF9999'; // Light red for SAM
     } else if (row.muac <= 12) { // MAM
-      cell.s.fill = { fgColor: { rgb: 'FFCC99' } }; // Light orange for MAM
-    } else { // Normal
-      cell.s.fill = { fgColor: { rgb: 'CCFFCC' } }; // Light green for normal
+      bgColor = 'FFCC99'; // Light orange for MAM
+    }
+    
+    // Apply to all cells in the row
+    for (let col = 0; col <= range.e.c; col++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: col });
+      const cell = worksheet[cellAddress];
+      if (!cell) continue;
+      
+      // Create or get existing style object
+      if (!cell.s) cell.s = {};
+      
+      // Apply row color
+      cell.s.fill = { fgColor: { rgb: bgColor } };
     }
   });
 };
@@ -221,7 +228,8 @@ export const exportChildScreeningToExcel = (
         'Village': item.village,
         'Vaccination': item.vaccination,
         'Due Vaccine': item.dueVaccine ? 'Yes' : 'No',
-        'Remarks': item.remarks
+        'Remarks': item.remarks,
+        'Images': item.images && item.images.length > 0 ? `${item.images.length} images` : "None"
       }));
       
       // Create worksheet
@@ -255,7 +263,8 @@ export const exportChildScreeningToExcel = (
       'Vaccination': item.vaccination,
       'Due Vaccine': item.dueVaccine ? 'Yes' : 'No',
       'Remarks': item.remarks,
-      'Worker ID': item.userId
+      'Worker ID': item.userId,
+      'Images': item.images && item.images.length > 0 ? `${item.images.length} images` : "None"
     }));
     
     // Create worksheet
@@ -313,7 +322,8 @@ export const exportAwarenessSessionToExcel = (
     'Union Council': item.ucName,
     'Contact Number': item.contactNumber,
     'Type': item.type,
-    'Worker ID': item.userId
+    'Worker ID': item.userId,
+    'Images': item.images && item.images.length > 0 ? `${item.images.length} images` : "None"
   }));
   
   // Create worksheet

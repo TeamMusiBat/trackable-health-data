@@ -6,7 +6,8 @@ import { toast } from '@/hooks/use-toast';
 import { 
   ChildScreeningData, 
   AwarenessSessionData,
-  DuplicateEntry 
+  DuplicateEntry,
+  ExportOptions 
 } from '@/lib/types';
 import { exportChildScreeningToExcel, exportAwarenessSessionToExcel } from '@/utils/excelExport';
 
@@ -22,7 +23,7 @@ interface DataContextType {
   updateAwarenessSession: (id: string, data: Partial<AwarenessSessionData>) => Promise<void>;
   checkDuplicate: (data: Partial<ChildScreeningData>) => DuplicateEntry;
   syncData: () => Promise<void>;
-  exportData: (type: 'child' | 'fmt' | 'sm', filter?: 'today' | 'all' | 'sam' | 'mam') => void;
+  exportData: (type: 'child' | 'fmt' | 'sm', filter?: 'today' | 'all' | 'sam' | 'mam', options?: Partial<ExportOptions>) => void;
   loading: boolean;
   isOnline: boolean;
 }
@@ -54,6 +55,55 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const { currentUser } = useAuth();
 
+  // Auto-delete images after 7 days
+  useEffect(() => {
+    const cleanupOldImages = () => {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      // Filter out images older than 7 days for child screening
+      setChildScreening(prevData => 
+        prevData.map(item => {
+          const itemDate = new Date(item.date);
+          if (itemDate < sevenDaysAgo && item.images && item.images.length > 0) {
+            return { ...item, images: [] };
+          }
+          return item;
+        })
+      );
+      
+      // Filter out images older than 7 days for FMT sessions
+      setAwarenessSessionsFMT(prevData => 
+        prevData.map(item => {
+          const itemDate = new Date(item.date);
+          if (itemDate < sevenDaysAgo && item.images && item.images.length > 0) {
+            return { ...item, images: [] };
+          }
+          return item;
+        })
+      );
+      
+      // Filter out images older than 7 days for SM sessions
+      setAwarenessSessionsSM(prevData => 
+        prevData.map(item => {
+          const itemDate = new Date(item.date);
+          if (itemDate < sevenDaysAgo && item.images && item.images.length > 0) {
+            return { ...item, images: [] };
+          }
+          return item;
+        })
+      );
+    };
+    
+    // Run cleanup once when component mounts
+    cleanupOldImages();
+    
+    // Schedule cleanup to run daily
+    const dailyCleanup = setInterval(cleanupOldImages, 86400000); // 24 hours
+    
+    return () => clearInterval(dailyCleanup);
+  }, []);
+
   // Monitor online/offline status
   useEffect(() => {
     const handleOnline = () => {
@@ -82,45 +132,43 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  // Load data from localStorage on initial mount
   useEffect(() => {
-    if (currentUser) {
-      const loadedChildScreening = localStorage.getItem('childScreening');
-      const loadedFMT = localStorage.getItem('awarenessSessionsFMT');
-      const loadedSM = localStorage.getItem('awarenessSessionsSM');
+    const loadedChildScreening = localStorage.getItem('childScreening');
+    const loadedFMT = localStorage.getItem('awarenessSessionsFMT');
+    const loadedSM = localStorage.getItem('awarenessSessionsSM');
 
-      if (loadedChildScreening) {
-        try {
-          setChildScreening(JSON.parse(loadedChildScreening));
-        } catch (e) {
-          console.error('Failed to parse child screening data', e);
-        }
-      }
-      
-      if (loadedFMT) {
-        try {
-          setAwarenessSessionsFMT(JSON.parse(loadedFMT));
-        } catch (e) {
-          console.error('Failed to parse FMT sessions data', e);
-        }
-      }
-      
-      if (loadedSM) {
-        try {
-          setAwarenessSessionsSM(JSON.parse(loadedSM));
-        } catch (e) {
-          console.error('Failed to parse SM sessions data', e);
-        }
+    if (loadedChildScreening) {
+      try {
+        setChildScreening(JSON.parse(loadedChildScreening));
+      } catch (e) {
+        console.error('Failed to parse child screening data', e);
       }
     }
-  }, [currentUser]);
-
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('childScreening', JSON.stringify(childScreening));
-      localStorage.setItem('awarenessSessionsFMT', JSON.stringify(awarenessSessionsFMT));
-      localStorage.setItem('awarenessSessionsSM', JSON.stringify(awarenessSessionsSM));
+    
+    if (loadedFMT) {
+      try {
+        setAwarenessSessionsFMT(JSON.parse(loadedFMT));
+      } catch (e) {
+        console.error('Failed to parse FMT sessions data', e);
+      }
     }
-  }, [childScreening, awarenessSessionsFMT, awarenessSessionsSM, currentUser]);
+    
+    if (loadedSM) {
+      try {
+        setAwarenessSessionsSM(JSON.parse(loadedSM));
+      } catch (e) {
+        console.error('Failed to parse SM sessions data', e);
+      }
+    }
+  }, []);
+
+  // Save data to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('childScreening', JSON.stringify(childScreening));
+    localStorage.setItem('awarenessSessionsFMT', JSON.stringify(awarenessSessionsFMT));
+    localStorage.setItem('awarenessSessionsSM', JSON.stringify(awarenessSessionsSM));
+  }, [childScreening, awarenessSessionsFMT, awarenessSessionsSM]);
 
   const checkDuplicate = (data: Partial<ChildScreeningData>): DuplicateEntry => {
     if (!data.name || !data.father || !data.village) {
@@ -237,6 +285,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateChildScreening = async (id: string, data: Partial<ChildScreeningData>) => {
     if (!currentUser) return;
+    
+    // Check if user has permission to edit (developer or master)
+    if (currentUser.role !== 'developer' && currentUser.role !== 'master') {
+      toast({
+        title: "Permission denied",
+        description: "You don't have permission to edit this entry",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setChildScreening(prev => 
       prev.map(item => 
@@ -254,6 +312,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateAwarenessSession = async (id: string, data: Partial<AwarenessSessionData>) => {
     if (!currentUser) return;
+    
+    // Check if user has permission to edit (developer or master)
+    if (currentUser.role !== 'developer' && currentUser.role !== 'master') {
+      toast({
+        title: "Permission denied",
+        description: "You don't have permission to edit this entry",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Check if it's an FMT or SM session
     const isFMT = awarenessSessionsFMT.some(session => session.id === id);
@@ -322,7 +390,49 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const exportData = (type: 'child' | 'fmt' | 'sm', filter: 'today' | 'all' | 'sam' | 'mam' = 'today') => {
+  // Export images separately if requested
+  const exportImages = (data: (ChildScreeningData | AwarenessSessionData)[], type: string) => {
+    let imagesExported = 0;
+    
+    data.forEach(item => {
+      if (item.images && item.images.length > 0) {
+        item.images.forEach((imageData, index) => {
+          const name = item.name.replace(/\s+/g, '_');
+          const date = new Date(item.date).toISOString().split('T')[0];
+          const fileName = `${type}_${name}_${date}_image${index+1}.png`;
+          
+          // For base64 images, create a downloadable link
+          if (imageData.startsWith('data:image')) {
+            const link = document.createElement('a');
+            link.href = imageData;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            imagesExported++;
+          }
+        });
+      }
+    });
+    
+    if (imagesExported > 0) {
+      toast({
+        title: "Images exported",
+        description: `${imagesExported} images have been exported.`,
+      });
+    } else {
+      toast({
+        title: "No images found",
+        description: "No images were found to export.",
+      });
+    }
+  };
+
+  const exportData = (
+    type: 'child' | 'fmt' | 'sm', 
+    filter: 'today' | 'all' | 'sam' | 'mam' = 'today',
+    options?: Partial<ExportOptions>
+  ) => {
     const today = new Date().toDateString();
     const currentDate = new Date().toLocaleDateString();
     
@@ -338,9 +448,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const title = `Child Screening Data - ${filter === 'today' ? currentDate : 'All Records'}`;
       
+      // Export images if requested
+      if (options?.includeImages) {
+        exportImages(filteredData, 'child_screening');
+      }
+      
       exportChildScreeningToExcel(filteredData, {
         filterSam: filter === 'sam',
         filterMam: filter === 'mam',
+        workerSplit: options?.workerSplit,
         title: title
       });
       
@@ -354,6 +470,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         : awarenessSessionsFMT;
       
       const title = `FMT Awareness Sessions - ${filter === 'today' ? currentDate : 'All Records'}`;
+      
+      // Export images if requested
+      if (options?.includeImages) {
+        exportImages(filteredData, 'fmt_session');
+      }
       
       exportAwarenessSessionToExcel(filteredData, {
         type: 'FMT',
@@ -370,6 +491,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         : awarenessSessionsSM;
       
       const title = `Social Mobilizer Awareness Sessions - ${filter === 'today' ? currentDate : 'All Records'}`;
+      
+      // Export images if requested
+      if (options?.includeImages) {
+        exportImages(filteredData, 'sm_session');
+      }
       
       exportAwarenessSessionToExcel(filteredData, {
         type: 'Social Mobilizers',

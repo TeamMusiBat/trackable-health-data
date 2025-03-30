@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -16,9 +17,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FileSpreadsheet, Calendar, CalendarDays, Users } from 'lucide-react';
+import { FileSpreadsheet, Calendar, CalendarDays, Users, Image } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface ExportModalProps {
   open: boolean;
@@ -32,6 +32,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ open, onOpenChange }) 
     samOnly: false,
     mamOnly: false,
     splitByWorker: false,
+    includeImages: false,
     timeRange: 'today' as 'today' | 'all',
   });
 
@@ -46,7 +47,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({ open, onOpenChange }) 
       }
     }
     
-    exportData(type, filter);
+    exportData(type, filter, {
+      includeImages: exportOptions.includeImages,
+      workerSplit: exportOptions.splitByWorker
+    });
     onOpenChange(false);
   };
 
@@ -121,6 +125,18 @@ export const ExportModal: React.FC<ExportModalProps> = ({ open, onOpenChange }) 
                 />
                 <Label htmlFor="split" className="cursor-pointer">Split by field worker</Label>
               </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="includeImages" 
+                  checked={exportOptions.includeImages}
+                  onCheckedChange={(checked) => setExportOptions({...exportOptions, includeImages: !!checked})}
+                />
+                <Label htmlFor="includeImages" className="flex items-center cursor-pointer">
+                  <Image className="h-4 w-4 mr-1" />
+                  Export images separately
+                </Label>
+              </div>
             </div>
             
             <Button className="w-full" onClick={() => handleExport('child')}>
@@ -152,6 +168,18 @@ export const ExportModal: React.FC<ExportModalProps> = ({ open, onOpenChange }) 
               </div>
             </div>
             
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="fmt-includeImages" 
+                checked={exportOptions.includeImages}
+                onCheckedChange={(checked) => setExportOptions({...exportOptions, includeImages: !!checked})}
+              />
+              <Label htmlFor="fmt-includeImages" className="flex items-center cursor-pointer">
+                <Image className="h-4 w-4 mr-1" />
+                Export images separately
+              </Label>
+            </div>
+            
             <Button className="w-full" onClick={() => handleExport('fmt')}>
               <FileSpreadsheet className="mr-2 h-4 w-4" />
               Export FMT Sessions Data
@@ -179,6 +207,18 @@ export const ExportModal: React.FC<ExportModalProps> = ({ open, onOpenChange }) 
                   <Label htmlFor="sm-all" className="cursor-pointer">All records</Label>
                 </div>
               </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="sm-includeImages" 
+                checked={exportOptions.includeImages}
+                onCheckedChange={(checked) => setExportOptions({...exportOptions, includeImages: !!checked})}
+              />
+              <Label htmlFor="sm-includeImages" className="flex items-center cursor-pointer">
+                <Image className="h-4 w-4 mr-1" />
+                Export images separately
+              </Label>
             </div>
             
             <Button className="w-full" onClick={() => handleExport('sm')}>

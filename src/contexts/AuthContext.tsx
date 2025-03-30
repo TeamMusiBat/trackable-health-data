@@ -15,9 +15,14 @@ interface AuthContextType {
 const initialUsers: User[] = [
   {
     id: '1',
+    name: 'Super Admin',
+    email: 'admin@track4health.com',
+    role: 'developer',
+    active: true,
     username: 'asifjamali83',
     password: 'Atifkhan83##',
-    role: 'developer',
+    online: true,
+    lastActive: new Date()
   },
 ];
 
@@ -127,6 +132,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    // Only allow developers to logout
+    if (currentUser?.role !== 'developer') {
+      toast({
+        title: "Action restricted",
+        description: "Only administrators can logout from the system",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setCurrentUser(null);
     localStorage.removeItem('track4health_user');
   };

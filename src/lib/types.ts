@@ -38,13 +38,24 @@ export interface AwarenessSessionData extends BaseEntry {
   images?: string[]; // Add images field
 }
 
+// User role type
+export type UserRole = 'developer' | 'master' | 'user';
+
 // User types
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'fieldworker' | 'developer';
+  role: UserRole;
   active: boolean;
+  username?: string; // Optional fields to fix type errors
+  password?: string;
+  online?: boolean;
+  lastActive?: Date;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
 }
 
 // Duplicate entry check result
@@ -57,8 +68,10 @@ export interface DuplicateEntry {
 export interface ExportOptions {
   filterSam?: boolean;
   filterMam?: boolean;
+  includeImages?: boolean;
   type?: string;
   title?: string;
+  workerSplit?: boolean;
 }
 
 // Editable record marker

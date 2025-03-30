@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Edit2, Save, X } from 'lucide-react';
 import { ImageCapture } from './ImageCapture';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/hooks/use-toast';
 
 interface EditableEntryProps<T> {
   data: T;
@@ -21,9 +23,22 @@ interface EditableEntryProps<T> {
 
 export function EditableEntry<T>({ data, onSave, fieldConfig, title }: EditableEntryProps<T>) {
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState<Partial<T>>({}); 
+  const [formData, setFormData] = useState<Partial<T>>({});
+  const { currentUser } = useAuth();
+  
+  // Only allow developers and masters to edit entries
+  const canEdit = currentUser?.role === 'developer' || currentUser?.role === 'master';
 
   const handleEdit = () => {
+    if (!canEdit) {
+      toast({
+        title: "Access Denied",
+        description: "Only administrators can edit entries",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setFormData({ ...data });
     setIsEditing(true);
   };
@@ -36,6 +51,15 @@ export function EditableEntry<T>({ data, onSave, fieldConfig, title }: EditableE
   };
 
   const handleSave = () => {
+    if (!canEdit) {
+      toast({
+        title: "Access Denied",
+        description: "Only administrators can edit entries",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     onSave(formData);
     setIsEditing(false);
   };
