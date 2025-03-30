@@ -52,6 +52,7 @@ export interface User {
   password?: string;
   online?: boolean;
   lastActive?: Date;
+  phone?: string; // Add phone property to fix the type error
   location?: {
     latitude: number;
     longitude: number;
