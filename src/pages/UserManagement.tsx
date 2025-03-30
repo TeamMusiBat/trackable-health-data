@@ -66,7 +66,7 @@ const DEMO_USERS: User[] = [
     active: true,
     role: "developer",
     online: true,
-    lastActive: new Date(),
+    lastActive: new Date()
   },
   {
     id: "2",
