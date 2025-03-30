@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
@@ -305,7 +304,7 @@ const ChildScreening = () => {
     updateChildScreening(id, updatedData);
   };
 
-  const canEdit = currentUser?.role === 'admin' || currentUser?.role === 'developer';
+  const canEdit = currentUser?.role === 'developer' || currentUser?.role === 'master';
 
   if (!isAuthenticated) {
     return <Navigate to="/login" />;

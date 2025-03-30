@@ -43,13 +43,13 @@ function App() {
                 
                 <Route path="/fmt-awareness" element={
                   <RequireAuth>
-                    <AwarenessSession type="FMT" />
+                    <AwarenessSession type="fmt" />
                   </RequireAuth>
                 } />
                 
                 <Route path="/sm-awareness" element={
                   <RequireAuth>
-                    <AwarenessSession type="Social Mobilizers" />
+                    <AwarenessSession type="sm" />
                   </RequireAuth>
                 } />
                 

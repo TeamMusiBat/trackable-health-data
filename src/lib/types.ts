@@ -39,7 +39,7 @@ export interface AwarenessSessionData extends BaseEntry {
 }
 
 // User role type
-export type UserRole = 'developer' | 'master' | 'user';
+export type UserRole = 'developer' | 'master' | 'admin' | 'user';
 
 // User types
 export interface User {
@@ -56,6 +56,11 @@ export interface User {
     latitude: number;
     longitude: number;
   };
+}
+
+// Update AwarenessSession component props to match the casing in App.tsx
+export interface AwarenessSessionProps {
+  type: "fmt" | "sm";
 }
 
 // Duplicate entry check result

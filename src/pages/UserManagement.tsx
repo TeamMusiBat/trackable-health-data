@@ -61,6 +61,9 @@ const DEMO_USERS: User[] = [
     id: "1",
     username: "asifjamali83",
     password: "Atifkhan83##",
+    name: "Asif Jamali",
+    email: "asif@example.com",
+    active: true,
     role: "developer",
     online: true,
     lastActive: new Date(),
@@ -69,6 +72,9 @@ const DEMO_USERS: User[] = [
     id: "2",
     username: "master_user",
     password: "password123",
+    name: "Master User",
+    email: "master@example.com",
+    active: true,
     role: "master",
     online: false,
     lastActive: new Date(Date.now() - 3600000),
@@ -77,6 +83,9 @@ const DEMO_USERS: User[] = [
     id: "3",
     username: "field_worker1",
     password: "password123",
+    name: "Field Worker 1",
+    email: "worker1@example.com",
+    active: true,
     role: "user",
     online: true,
     lastActive: new Date(),
@@ -89,6 +98,9 @@ const DEMO_USERS: User[] = [
     id: "4",
     username: "field_worker2",
     password: "password123",
+    name: "Field Worker 2",
+    email: "worker2@example.com",
+    active: true,
     role: "user",
     online: false,
     lastActive: new Date(Date.now() - 86400000),
@@ -101,7 +113,10 @@ const UserManagement = () => {
   const [newUser, setNewUser] = useState({
     username: "",
     password: "",
-    role: "user",
+    role: "user" as UserRole,
+    name: "",
+    email: "",
+    active: true
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -112,10 +127,10 @@ const UserManagement = () => {
     currentUser?.role === "developer" || currentUser?.role === "master";
 
   const addUser = () => {
-    if (!newUser.username || !newUser.password) {
+    if (!newUser.username || !newUser.password || !newUser.name || !newUser.email) {
       toast({
         title: "Missing information",
-        description: "Username and password are required",
+        description: "Username, password, name and email are required",
         variant: "destructive",
       });
       return;
@@ -136,7 +151,10 @@ const UserManagement = () => {
       id: (users.length + 1).toString(),
       username: newUser.username,
       password: newUser.password,
-      role: newUser.role as UserRole,
+      name: newUser.name,
+      email: newUser.email,
+      active: true,
+      role: newUser.role,
       online: false,
       lastActive: new Date(),
     };
@@ -147,7 +165,10 @@ const UserManagement = () => {
     setNewUser({
       username: "",
       password: "",
-      role: "user",
+      role: "user" as UserRole,
+      name: "",
+      email: "",
+      active: true
     });
 
     toast({

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -126,7 +125,7 @@ export function Header() {
           
           {isAuthenticated && (
             <>
-              {currentUser?.role === 'admin' && (
+              {(currentUser?.role === 'developer' || currentUser?.role === 'master') && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -160,13 +159,15 @@ export function Header() {
                 <Avatar className="h-8 w-8">
                   <AvatarFallback>{currentUser?.name?.[0] || "U"}</AvatarFallback>
                 </Avatar>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleLogout}
-                >
-                  Logout
-                </Button>
+                {currentUser?.role === 'developer' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </Button>
+                )}
               </div>
             </>
           )}

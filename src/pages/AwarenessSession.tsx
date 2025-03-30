@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
@@ -29,7 +28,7 @@ import { Navigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { FileSpreadsheet, Plus, X, Map, Building, Wifi, WifiOff, Image as ImageIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AwarenessSessionData } from "@/lib/types";
+import { AwarenessSessionData, AwarenessSessionProps } from "@/lib/types";
 
 interface SessionFormData {
   serialNo: number;
@@ -41,10 +40,6 @@ interface SessionFormData {
   underFiveChildren: number | string;
   contactNumber: string;
   images?: string[];
-}
-
-interface AwarenessSessionProps {
-  type: "fmt" | "sm";
 }
 
 const initialFormState: SessionFormData = {
@@ -272,7 +267,7 @@ const AwarenessSession = ({ type }: AwarenessSessionProps) => {
     updateAwarenessSession(id, updatedData);
   };
 
-  const canEdit = currentUser?.role === 'admin' || currentUser?.role === 'developer';
+  const canEdit = currentUser?.role === 'developer' || currentUser?.role === 'master';
 
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
