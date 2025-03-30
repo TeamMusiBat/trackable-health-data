@@ -146,7 +146,7 @@ const UserManagement = () => {
       return;
     }
 
-    // Create new user
+    // Create new user with properly typed role
     const newUserEntry: User = {
       id: (users.length + 1).toString(),
       username: newUser.username,
@@ -154,7 +154,7 @@ const UserManagement = () => {
       name: newUser.name,
       email: newUser.email,
       active: true,
-      role: newUser.role,
+      role: newUser.role, // This is now correctly typed as UserRole
       online: false,
       lastActive: new Date(),
     };
