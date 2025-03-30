@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -18,7 +17,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FileSpreadsheet, Calendar, CalendarDays, Users } from 'lucide-react';
-import { useData } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ExportModalProps {
   open: boolean;

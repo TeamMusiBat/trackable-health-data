@@ -1,10 +1,8 @@
-
-import { Workbook, Worksheet } from 'xlsx';
 import * as XLSX from 'xlsx';
 import { ChildScreeningData, AwarenessSessionData } from '@/lib/types';
 
 // Apply styling to Excel headers
-const applyHeaderStyle = (worksheet: Worksheet): void => {
+const applyHeaderStyle = (worksheet: XLSX.WorkSheet): void => {
   // Get column range
   const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
   const colCount = range.e.c + 1;
@@ -35,7 +33,7 @@ const applyHeaderStyle = (worksheet: Worksheet): void => {
 };
 
 // Apply MUAC-based color coding for child screening data
-const applyMuacFormatting = (worksheet: Worksheet, dataRows: ChildScreeningData[]): void => {
+const applyMuacFormatting = (worksheet: XLSX.WorkSheet, dataRows: ChildScreeningData[]): void => {
   // Get column range
   const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
   
@@ -73,7 +71,7 @@ const applyMuacFormatting = (worksheet: Worksheet, dataRows: ChildScreeningData[
 };
 
 // Set column widths based on content
-const setColumnWidths = (worksheet: Worksheet): void => {
+const setColumnWidths = (worksheet: XLSX.WorkSheet): void => {
   // Get column range
   const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
   const colCount = range.e.c + 1;
@@ -122,7 +120,7 @@ const setColumnWidths = (worksheet: Worksheet): void => {
 };
 
 // Add title to worksheet
-const addTitle = (worksheet: Worksheet, title: string): void => {
+const addTitle = (worksheet: XLSX.WorkSheet, title: string): void => {
   // Get column range
   const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
   const colCount = range.e.c + 1;

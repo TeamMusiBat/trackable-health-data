@@ -17,53 +17,65 @@ import AwarenessSession from "./pages/AwarenessSession";
 import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+// Create a client with explicit configuration
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <TooltipProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <DataProvider>
-              <Toaster />
-              <Sonner />
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/dashboard" element={
-                  <RequireAuth>
-                    <Dashboard />
-                  </RequireAuth>
-                } />
-                <Route path="/child-screening" element={
-                  <RequireAuth>
-                    <ChildScreening />
-                  </RequireAuth>
-                } />
-                <Route path="/fmt-awareness" element={
-                  <RequireAuth>
-                    <AwarenessSession type="fmt" />
-                  </RequireAuth>
-                } />
-                <Route path="/sm-awareness" element={
-                  <RequireAuth>
-                    <AwarenessSession type="sm" />
-                  </RequireAuth>
-                } />
-                <Route path="/user-management" element={
-                  <RequireAuth>
-                    <UserManagement />
-                  </RequireAuth>
-                } />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </DataProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+// Fixed App component using proper React functional component pattern
+const App = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <TooltipProvider>
+          <BrowserRouter>
+            <AuthProvider>
+              <DataProvider>
+                <Toaster />
+                <Sonner />
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/dashboard" element={
+                    <RequireAuth>
+                      <Dashboard />
+                    </RequireAuth>
+                  } />
+                  <Route path="/child-screening" element={
+                    <RequireAuth>
+                      <ChildScreening />
+                    </RequireAuth>
+                  } />
+                  <Route path="/fmt-awareness" element={
+                    <RequireAuth>
+                      <AwarenessSession type="fmt" />
+                    </RequireAuth>
+                  } />
+                  <Route path="/sm-awareness" element={
+                    <RequireAuth>
+                      <AwarenessSession type="sm" />
+                    </RequireAuth>
+                  } />
+                  <Route path="/user-management" element={
+                    <RequireAuth>
+                      <UserManagement />
+                    </RequireAuth>
+                  } />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </DataProvider>
+            </AuthProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
