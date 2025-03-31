@@ -9,6 +9,7 @@ import { LocationsModal } from "@/components/LocationsModal";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { MapPin, Menu, X, LogOut, BarChart3, Syringe, UserCheck, Users } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { toast } from "@/components/ui/use-toast"; // Added toast import
 import { 
   NavigationMenu,
   NavigationMenuContent,
