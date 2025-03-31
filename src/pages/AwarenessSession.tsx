@@ -9,15 +9,17 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, Plus, Save, X } from 'lucide-react';
+import { Check, Plus, Save, X, MapPin, Calendar } from 'lucide-react';
 import { EditableEntry } from '@/components/EditableEntry';
 import { toast } from '@/hooks/use-toast';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import { nanoid } from 'nanoid';
 import { ImageCapture } from '@/components/ImageCapture';
+import { GoogleMapLink } from '@/components/GoogleMapLink';
+import { Checkbox } from '@/components/ui/checkbox';
+import { format } from 'date-fns';
 
-const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
+export function AwarenessSession({ type }: AwarenessSessionProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser } = useAuth();
@@ -26,9 +28,9 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
   // Detect type from URL query parameter if not provided as prop
   const sessionsType = type || new URLSearchParams(location.search).get('type') || 'fmt';
   const typeLabel = sessionsType === 'fmt' ? 'FMT' : 'Social Mobilizers';
+  const today = new Date();
   
   // State for form inputs
-  const [serialNo, setSerialNo] = useState(1);
   const [sessionNumber, setSessionNumber] = useState(1);
   const [name, setName] = useState("");
   const [fatherOrHusband, setFatherOrHusband] = useState("");
@@ -37,7 +39,7 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
   const [ucName, setUcName] = useState("");
   const [underFiveChildren, setUnderFiveChildren] = useState("");
   const [contactNumber, setContactNumber] = useState("");
-  const [sameUc, setSameUc] = useState("Yes");
+  const [sameUc, setSameUc] = useState(true);
   const [alternateLocation, setAlternateLocation] = useState("");
   const [locationCoords, setLocationCoords] = useState<{latitude: number, longitude: number, accuracy?: number} | null>(null);
   const [images, setImages] = useState<string[]>([]);
@@ -58,13 +60,34 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
     );
   }, [awarenessSessionsFMT, awarenessSessionsSM, sessionsType]);
 
-  // Update serial number when sessions list changes
+  // Update session number when sessions list changes
   useEffect(() => {
     if (sessionsList.length > 0) {
-      const maxSerialNo = Math.max(...sessionsList.map(session => session.serialNo));
-      setSerialNo(maxSerialNo + 1);
+      // Find max session number for today's sessions
+      const todaySessions = sessionsList.filter(session => 
+        new Date(session.date).toDateString() === today.toDateString()
+      );
+      
+      if (todaySessions.length > 0) {
+        const maxSessionNumber = Math.max(...todaySessions.map(session => session.sessionNumber));
+        setSessionNumber(maxSessionNumber + 1);
+      } else {
+        setSessionNumber(1); // First session of the day
+      }
     }
   }, [sessionsList]);
+
+  // Format name properly (capitalize first letters, trim spaces)
+  const formatName = (input: string): string => {
+    // Remove any characters that are not letters, numbers, or spaces
+    const cleanName = input.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+    
+    // Split by spaces and capitalize each word
+    return cleanName
+      .split(/\s+/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
 
   // Capture GPS location
   const captureLocation = () => {
@@ -88,13 +111,18 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
           });
         },
         (error) => {
+          console.error("Geolocation error:", error);
           toast({
             title: "Error getting location",
-            description: error.message,
+            description: error.message || "Location service failed",
             variant: "destructive"
           });
         },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        { 
+          enableHighAccuracy: true,
+          timeout: 30000, // Increased timeout to 30 seconds
+          maximumAge: 0 
+        }
       );
     } else {
       toast({
@@ -114,14 +142,10 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
     setUcName("");
     setUnderFiveChildren("");
     setContactNumber("");
-    setSameUc("Yes");
+    setSameUc(true);
     setAlternateLocation("");
     setImages([]);
     setLocationCoords(null);
-    
-    // Increment serial number
-    setSerialNo(prevSerialNo => prevSerialNo + 1);
-    setSessionNumber(prevSessionNumber => prevSessionNumber + 1);
   };
 
   // Handle form submission for single entry
@@ -137,18 +161,22 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
       return;
     }
     
+    const formattedName = formatName(name);
+    const formattedFatherName = formatName(fatherOrHusband);
+    const formattedVillageName = formatName(villageName);
+    
     const newSession: Omit<AwarenessSessionData, "id" | "userId" | "synced"> = {
-      serialNo: serialNo,
+      serialNo: 0, // Keep for compatibility but we don't use it anymore
       sessionNumber: Number(sessionNumber),
-      name,
-      fatherOrHusband,
+      name: formattedName,
+      fatherOrHusband: formattedFatherName,
       age: Number(age),
-      villageName,
+      villageName: formattedVillageName,
       ucName,
       underFiveChildren: Number(underFiveChildren) || 0,
       contactNumber,
-      sameUc,
-      alternateLocation,
+      sameUc: sameUc ? "Yes" : "No",
+      alternateLocation: !sameUc ? alternateLocation : "",
       locationCoords: locationCoords || undefined,
       date: new Date(),
       type: sessionsType === 'fmt' ? 'FMT' : 'Social Mobilizers',
@@ -159,10 +187,12 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
     
     toast({
       title: "Session recorded",
-      description: `${typeLabel} awareness session for ${name} has been saved`,
+      description: `${typeLabel} awareness session for ${formattedName} has been saved`,
     });
     
     resetForm();
+    // Increment session number for the next entry of the same day
+    setSessionNumber(prev => prev + 1);
   };
 
   // Add entry to bulk list
@@ -176,18 +206,22 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
       return;
     }
     
+    const formattedName = formatName(name);
+    const formattedFatherName = formatName(fatherOrHusband);
+    const formattedVillageName = formatName(villageName);
+    
     const newSession: Omit<AwarenessSessionData, "id" | "userId" | "synced"> = {
-      serialNo: serialNo,
+      serialNo: 0, // Keep for compatibility but we don't use it anymore
       sessionNumber: Number(sessionNumber),
-      name,
-      fatherOrHusband,
+      name: formattedName,
+      fatherOrHusband: formattedFatherName,
       age: Number(age),
-      villageName,
+      villageName: formattedVillageName,
       ucName,
       underFiveChildren: Number(underFiveChildren) || 0,
       contactNumber,
-      sameUc: sameUc,
-      alternateLocation,
+      sameUc: sameUc ? "Yes" : "No",
+      alternateLocation: !sameUc ? alternateLocation : "",
       locationCoords: locationCoords || undefined,
       date: new Date(),
       type: sessionsType === 'fmt' ? 'FMT' : 'Social Mobilizers',
@@ -198,7 +232,7 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
     
     toast({
       title: "Added to bulk list",
-      description: `${name} added to bulk entry list`,
+      description: `${formattedName} added to bulk entry list`,
     });
     
     resetForm();
@@ -221,10 +255,12 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
     
     toast({
       title: "Bulk submission successful",
-      description: `${bulkEntries.length} sessions have been saved`,
+      description: `${bulkEntries.length} participants have been saved`,
     });
     
     setBulkEntries([]);
+    // Increment session number after bulk submission
+    setSessionNumber(prev => prev + 1);
   };
 
   // Remove entry from bulk list
@@ -249,37 +285,32 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
       <Header />
       
       <main className="flex-1 container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">{typeLabel} Awareness Sessions</h1>
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold">{typeLabel} Awareness Sessions</h1>
+          <div className="text-muted-foreground flex items-center mt-1">
+            <Calendar className="h-4 w-4 mr-1" />
+            <span>{format(today, 'PPP')}</span>
+          </div>
+        </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="single">Single Entry</TabsTrigger>
-            <TabsTrigger value="bulk">Bulk Entry</TabsTrigger>
+            <TabsTrigger value="bulk">Bulk Entry ({bulkEntries.length})</TabsTrigger>
           </TabsList>
           
           <TabsContent value="single" className="mt-4">
             <Card>
               <CardHeader>
-                <CardTitle>New {typeLabel} Awareness Session</CardTitle>
+                <CardTitle>New {typeLabel} Awareness Session #{sessionNumber}</CardTitle>
                 <CardDescription>
-                  Record a new awareness session for {typeLabel}
+                  Record participants for {typeLabel.toLowerCase()} awareness sessions - {format(today, 'PPP')}
                 </CardDescription>
               </CardHeader>
               
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="serialNo">Serial No</Label>
-                      <Input
-                        id="serialNo"
-                        type="number"
-                        value={serialNo}
-                        onChange={(e) => setSerialNo(Number(e.target.value))}
-                        disabled
-                      />
-                    </div>
-                    
                     <div className="space-y-2">
                       <Label htmlFor="sessionNumber">Session Number</Label>
                       <Input
@@ -322,13 +353,40 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="villageName">Village Name *</Label>
-                      <Input
-                        id="villageName"
-                        value={villageName}
-                        onChange={(e) => setVillageName(e.target.value)}
-                        required
-                      />
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="villageName">Village Name *</Label>
+                        {locationCoords && (
+                          <GoogleMapLink 
+                            latitude={locationCoords.latitude} 
+                            longitude={locationCoords.longitude} 
+                            name={villageName || "Location"} 
+                          />
+                        )}
+                      </div>
+                      <div className="flex space-x-2">
+                        <Input
+                          id="villageName"
+                          value={villageName}
+                          onChange={(e) => setVillageName(e.target.value)}
+                          className="flex-1"
+                          required
+                        />
+                        <Button 
+                          type="button" 
+                          variant="outline"
+                          onClick={captureLocation}
+                          className="whitespace-nowrap"
+                        >
+                          <MapPin className="h-4 w-4 mr-2" />
+                          Map Location
+                        </Button>
+                      </div>
+                      {locationCoords && (
+                        <span className="text-xs text-muted-foreground">
+                          Coordinates: {locationCoords.latitude.toFixed(6)}, {locationCoords.longitude.toFixed(6)}
+                          {locationCoords.accuracy && ` (±${locationCoords.accuracy.toFixed(1)}m)`}
+                        </span>
+                      )}
                     </div>
                     
                     <div className="space-y-2">
@@ -351,54 +409,32 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="contactNumber">Contact Number</Label>
+                      <Label htmlFor="contactNumber">Contact Number (Optional)</Label>
                       <Input
                         id="contactNumber"
                         value={contactNumber}
                         onChange={(e) => setContactNumber(e.target.value)}
+                        placeholder="Optional"
                       />
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="sameUc">Person belongs to same UC</Label>
-                      <select 
-                        id="sameUc"
-                        value={sameUc}
-                        onChange={(e) => setSameUc(e.target.value)}
-                        className="w-full border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                      >
-                        <option value="Yes">Yes</option>
-                        <option value="No">No</option>
-                      </select>
-                    </div>
-                    
-                    {sameUc === "No" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="alternateLocation">Alternate Location</Label>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Checkbox 
+                          id="sameUc"
+                          checked={sameUc}
+                          onCheckedChange={(checked) => setSameUc(!!checked)}
+                        />
+                        <Label htmlFor="sameUc" className="cursor-pointer">Person belongs to same UC</Label>
+                      </div>
+                      
+                      {!sameUc && (
                         <Input
                           id="alternateLocation"
                           value={alternateLocation}
                           onChange={(e) => setAlternateLocation(e.target.value)}
+                          placeholder="Alternate Location"
                         />
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Location</Label>
-                    <div className="flex items-center space-x-2">
-                      <Button 
-                        type="button" 
-                        variant="outline"
-                        onClick={captureLocation}
-                      >
-                        Capture GPS
-                      </Button>
-                      {locationCoords && (
-                        <span className="text-sm">
-                          Lat: {locationCoords.latitude.toFixed(6)}, Long: {locationCoords.longitude.toFixed(6)}
-                          {locationCoords.accuracy && ` (±${locationCoords.accuracy.toFixed(1)}m)`}
-                        </span>
                       )}
                     </div>
                   </div>
@@ -408,6 +444,7 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
                     <ImageCapture
                       initialImages={images}
                       onImagesChange={setImages}
+                      maxImages={100} // Allow many images
                     />
                   </div>
                   
@@ -422,7 +459,7 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
                     </Button>
                     <Button type="submit">
                       <Save className="h-4 w-4 mr-2" />
-                      Save Session
+                      Save Participant
                     </Button>
                   </div>
                 </form>
@@ -433,16 +470,16 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
           <TabsContent value="bulk" className="mt-4">
             <Card>
               <CardHeader>
-                <CardTitle>Bulk Entry List</CardTitle>
+                <CardTitle>Bulk Entry List - Session #{sessionNumber}</CardTitle>
                 <CardDescription>
-                  Submit multiple awareness sessions at once
+                  Submit multiple participants for Session #{sessionNumber} at once
                 </CardDescription>
               </CardHeader>
               
               <CardContent>
                 {bulkEntries.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
-                    No entries added yet. Add entries from the Single Entry tab.
+                    No entries added yet. Add participants from the Single Entry tab.
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -504,7 +541,16 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
                       </div>
                       <div className="flex justify-between">
                         <span className="font-medium">Village:</span>
-                        <span>{session.villageName}</span>
+                        <span>
+                          {session.villageName}
+                          {session.locationCoords && (
+                            <GoogleMapLink 
+                              latitude={session.locationCoords.latitude} 
+                              longitude={session.locationCoords.longitude} 
+                              name={session.villageName} 
+                            />
+                          )}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="font-medium">Age:</span>
@@ -543,6 +589,6 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
       <Footer />
     </div>
   );
-};
+}
 
 export default AwarenessSession;

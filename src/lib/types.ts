@@ -37,7 +37,7 @@ export interface AwarenessSessionData extends BaseEntry {
   ucName: string;
   underFiveChildren: number;
   contactNumber: string;
-  sameUc: string; // Changed from boolean to string to match actual usage
+  sameUc: string; // Keep as string ("Yes" or "No")
   alternateLocation?: string; // Added alternateLocation field
   locationCoords?: {  // Added location coordinates
     latitude: number;

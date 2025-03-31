@@ -7,12 +7,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
 import { LocationsModal } from "@/components/LocationsModal";
 import { Avatar, AvatarFallback } from "./ui/avatar";
-import { MapPin, Menu, X, LogOut, Home, Users, BarChart3, Syringe, UserCheck } from "lucide-react";
+import { MapPin, Menu, X, LogOut, BarChart3, Syringe, UserCheck, Users } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   NavigationMenu,
   NavigationMenuContent,
-  NavigationMenuIndicator,
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
@@ -49,33 +48,44 @@ export function Header() {
   };
 
   const handleShowLocations = () => {
-    const mockLocations = [
-      {
-        name: "John Doe",
-        latitude: 31.5204,
-        longitude: 74.3587,
-        lastActive: "10 minutes ago",
-        accuracy: 10
-      },
-      {
-        name: "Jane Smith",
-        latitude: 31.5074,
-        longitude: 74.3444,
-        lastActive: "2 hours ago",
-        accuracy: 5
-      },
-      {
-        name: "Ahmed Khan",
-        latitude: 31.5102,
-        longitude: 74.3434,
-        lastActive: "5 minutes ago",
-        accuracy: 8
+    // Simulating fetching real-time user locations
+    navigator.permissions.query({name: 'geolocation'}).then(function(result) {
+      if (result.state === 'granted' || result.state === 'prompt') {
+        const mockLocations = [
+          {
+            name: "John Doe",
+            latitude: 31.5204,
+            longitude: 74.3587,
+            lastActive: "10 minutes ago",
+            accuracy: 10
+          },
+          {
+            name: "Jane Smith",
+            latitude: 31.5074,
+            longitude: 74.3444,
+            lastActive: "2 hours ago",
+            accuracy: 5
+          },
+          {
+            name: "Ahmed Khan",
+            latitude: 31.5102,
+            longitude: 74.3434,
+            lastActive: "5 minutes ago",
+            accuracy: 8
+          }
+        ];
+        
+        console.info("Research assistant locations:", mockLocations);
+        setLocations(mockLocations);
+        setShowLocationsModal(true);
+      } else {
+        toast({
+          title: "Location permission denied",
+          description: "Cannot track field workers without location permissions",
+          variant: "destructive"
+        });
       }
-    ];
-    
-    console.info("Research assistant locations:", mockLocations);
-    setLocations(mockLocations);
-    setShowLocationsModal(true);
+    });
   };
   
   const refreshLocations = () => {
@@ -250,26 +260,14 @@ export function Header() {
             </Link>
             
             {currentUser?.role === 'developer' && (
-              <>
-                <Link 
-                  to="/user-management" 
-                  className="flex items-center gap-2 p-2 rounded-md hover:bg-accent"
-                  onClick={closeMobileMenu}
-                >
-                  <Users className="h-4 w-4" />
-                  <span>Manage Users</span>
-                </Link>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleShowLocations}
-                  className="justify-start pl-2"
-                >
-                  <MapPin className="h-4 w-4 mr-2" />
-                  <span>Research Assistants</span>
-                </Button>
-              </>
+              <Link 
+                to="/user-management" 
+                className="flex items-center gap-2 p-2 rounded-md hover:bg-accent"
+                onClick={closeMobileMenu}
+              >
+                <Users className="h-4 w-4" />
+                <span>Manage Users</span>
+              </Link>
             )}
             
             <Button

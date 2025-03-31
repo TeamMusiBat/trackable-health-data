@@ -5,15 +5,11 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowRight, CheckCircle, Phone } from "lucide-react";
+import { ArrowRight, CheckCircle } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-
-  const handleWhatsApp = () => {
-    window.open("https://wa.me/923032939576", "_blank");
-  };
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -64,22 +60,13 @@ const Index = () => {
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   )}
-                  
-                  <Button 
-                    variant="outline" 
-                    className="flex items-center gap-2"
-                    onClick={handleWhatsApp}
-                  >
-                    <Phone className="h-4 w-4" />
-                    WhatsApp Support
-                  </Button>
                 </div>
               </div>
-              <div className="order-first lg:order-last mx-auto lg:ml-auto flex items-center justify-center">
+              <div className="order-first lg:order-last mx-auto lg:mx-0 flex items-center justify-center">
                 <img 
                   src="https://unicphscat.blob.core.windows.net/images-prd/s0145620.png" 
                   alt="UNICEF Health Worker" 
-                  className="rounded-lg object-cover h-auto max-w-full max-h-[400px] shadow-xl" 
+                  className="rounded-lg object-cover h-auto max-h-[400px] w-full lg:w-auto shadow-xl" 
                 />
               </div>
             </div>
