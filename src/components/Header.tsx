@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,7 @@ import { LocationsModal } from "@/components/LocationsModal";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { MapPin, Menu, X, LogOut, BarChart3, Syringe, UserCheck, Users } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { toast } from "@/components/ui/use-toast"; // Added toast import
+import { toast } from "@/hooks/use-toast";
 import { 
   NavigationMenu,
   NavigationMenuContent,
@@ -49,7 +48,6 @@ export function Header() {
   };
 
   const handleShowLocations = () => {
-    // Simulating fetching real-time user locations
     navigator.permissions.query({name: 'geolocation'}).then(function(result) {
       if (result.state === 'granted' || result.state === 'prompt') {
         const mockLocations = [
@@ -195,7 +193,7 @@ export function Header() {
               
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback>{currentUser?.name?.[0] || "U"}</AvatarFallback>
+                  <AvatarFallback>{currentUser?.name ? currentUser.name[0].toUpperCase() : ""}</AvatarFallback>
                 </Avatar>
                 {(currentUser?.role === 'developer' || currentUser?.role === 'master') && (
                   <Button

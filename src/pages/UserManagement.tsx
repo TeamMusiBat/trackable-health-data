@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
@@ -69,49 +68,8 @@ const DEMO_USERS: User[] = [
     lastActive: new Date(),
     phone: "+923001234567"
   },
-  {
-    id: "2",
-    username: "master_user",
-    password: "password123",
-    name: "Master User",
-    email: "master@example.com",
-    active: true,
-    role: "master",
-    online: false,
-    lastActive: new Date(Date.now() - 3600000),
-    phone: "+923009876543"
-  },
-  {
-    id: "3",
-    username: "field_worker1",
-    password: "password123",
-    name: "Research Assistant 1",
-    email: "worker1@example.com",
-    active: true,
-    role: "user",
-    online: true,
-    lastActive: new Date(),
-    phone: "+923331234567",
-    location: {
-      latitude: 34.0151,
-      longitude: 71.5249,
-    },
-  },
-  {
-    id: "4",
-    username: "field_worker2",
-    password: "password123",
-    name: "Research Assistant 2",
-    email: "worker2@example.com",
-    active: true,
-    role: "user",
-    online: false,
-    lastActive: new Date(Date.now() - 86400000),
-    phone: "+923349876543"
-  },
 ];
 
-// Component for Add New User form
 const AddUserForm = ({ onAddUser }: { onAddUser: (userData: any) => void }) => {
   const { currentUser } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
@@ -232,8 +190,13 @@ const AddUserForm = ({ onAddUser }: { onAddUser: (userData: any) => void }) => {
   );
 };
 
-// Component for Users List
 const UsersList = ({ users, onDeleteUser }: { users: User[], onDeleteUser: (userId: string) => void }) => {
+  const { currentUser } = useAuth();
+  
+  const visibleUsers = currentUser?.role === 'developer' 
+    ? users 
+    : users.filter(user => user.role !== 'developer');
+    
   return (
     <Card>
       <CardHeader>
@@ -255,7 +218,7 @@ const UsersList = ({ users, onDeleteUser }: { users: User[], onDeleteUser: (user
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user, index) => (
+              {visibleUsers.map((user, index) => (
                 <TableRow key={user.id}>
                   <TableCell>{index + 1}</TableCell>
                   <TableCell className="font-medium">{user.username}</TableCell>
@@ -306,7 +269,6 @@ const UsersList = ({ users, onDeleteUser }: { users: User[], onDeleteUser: (user
   );
 };
 
-// Location Tracking component
 const LocationTracking = ({ users, onRefreshLocations }: { users: User[], onRefreshLocations: () => void }) => {
   return (
     <Card>
@@ -397,7 +359,6 @@ const LocationTracking = ({ users, onRefreshLocations }: { users: User[], onRefr
   );
 };
 
-// Activity Logs component
 const ActivityLogs = () => {
   return (
     <Card>
@@ -460,11 +421,9 @@ const UserManagement = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
-  // Check if user has admin permissions
   const hasAdminPermissions = 
     currentUser?.role === "developer" || currentUser?.role === "master";
     
-  // Handler for adding a new user
   const handleAddUser = (userData: any) => {
     if (!userData.username || !userData.password || !userData.name) {
       toast({
@@ -475,7 +434,6 @@ const UserManagement = () => {
       return;
     }
 
-    // Check for duplicate username
     if (users.some(user => user.username === userData.username)) {
       toast({
         title: "Username already exists",
@@ -485,14 +443,13 @@ const UserManagement = () => {
       return;
     }
 
-    // Create new user with properly typed role
     const newUserEntry: User = {
       id: (users.length + 1).toString(),
       username: userData.username,
       password: userData.password,
       name: userData.name,
-      email: userData.email || undefined, // Make email optional
-      phone: userData.phone || undefined, // Make phone optional
+      email: userData.email || undefined,
+      phone: userData.phone || undefined,
       active: true,
       role: userData.role,
       online: false,
@@ -507,14 +464,12 @@ const UserManagement = () => {
     });
   };
 
-  // Handler for deleting a user
   const handleDeleteUser = (id: string) => {
     setUserToDelete(id);
     setShowDeleteDialog(true);
   };
 
   const deleteUser = (id: string) => {
-    // Don't allow deleting the super admin
     if (id === "1") {
       toast({
         title: "Cannot delete super admin",
@@ -540,7 +495,6 @@ const UserManagement = () => {
       description: "Research Assistant locations are being updated",
     });
     
-    // In a real app, this would fetch the latest location data from the server
     setTimeout(() => {
       toast({
         title: "Locations updated",
@@ -591,12 +545,10 @@ const UserManagement = () => {
           </TabsList>
           
           <TabsContent value="users">
-            {/* Add New User form above User List */}
             <div className="grid grid-cols-1 gap-6 mb-6">
               <AddUserForm onAddUser={handleAddUser} />
             </div>
             
-            {/* User List */}
             <div className="grid grid-cols-1 gap-6">
               <UsersList users={users} onDeleteUser={handleDeleteUser} />
             </div>

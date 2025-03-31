@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
@@ -54,7 +53,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setIsLoading(false);
 
-    // Set up online/offline detection
     const updateOnlineStatus = () => {
       if (currentUser) {
         const updatedUser = { ...currentUser, online: navigator.onLine };
@@ -72,7 +70,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Track user location if they're an active user
   useEffect(() => {
     let watchId: number;
 
@@ -103,7 +100,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [currentUser?.id]);
 
   const login = async (username: string, password: string): Promise<boolean> => {
-    // In a real app, this would be an API call with proper security
     const foundUser = initialUsers.find(
       (user) => user.username === username && user.password === password
     );
@@ -132,7 +128,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    // Only allow developers to logout
     if (currentUser?.role !== 'developer') {
       toast({
         title: "Action restricted",
