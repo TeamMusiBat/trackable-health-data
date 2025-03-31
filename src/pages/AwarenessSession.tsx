@@ -734,7 +734,7 @@ const AwarenessSession = () => {
                                       { name: "contactNumber", label: "Contact Number", type: "text" },
                                       { name: "villageName", label: "Village", type: "text" },
                                       { name: "ucName", label: "UC Name", type: "text" },
-                                      { name: "sameUc", label: "Same UC", type: "checkbox" },
+                                      { name: "sameUc", label: "Same UC", type: "text" },
                                       { name: "alternateLocation", label: "Alternate Location", type: "text" },
                                       { name: "images", label: "Images", type: "images" }
                                     ]}

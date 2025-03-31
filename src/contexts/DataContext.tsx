@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from './AuthContext';
@@ -9,7 +8,7 @@ import {
   DuplicateEntry,
   ExportOptions 
 } from '@/lib/types';
-import { exportChildScreeningToExcel, exportAwarenessSessionToExcel } from '@/utils/excelExport';
+import { exportChildScreening, exportAwarenessSessions } from '@/utils/excelExport';
 
 interface DataContextType {
   childScreening: ChildScreeningData[];
@@ -55,13 +54,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const { currentUser } = useAuth();
 
-  // Auto-delete images after 7 days
   useEffect(() => {
     const cleanupOldImages = () => {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       
-      // Filter out images older than 7 days for child screening
       setChildScreening(prevData => 
         prevData.map(item => {
           const itemDate = new Date(item.date);
@@ -72,7 +69,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })
       );
       
-      // Filter out images older than 7 days for FMT sessions
       setAwarenessSessionsFMT(prevData => 
         prevData.map(item => {
           const itemDate = new Date(item.date);
@@ -83,7 +79,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })
       );
       
-      // Filter out images older than 7 days for SM sessions
       setAwarenessSessionsSM(prevData => 
         prevData.map(item => {
           const itemDate = new Date(item.date);
@@ -95,16 +90,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
     };
     
-    // Run cleanup once when component mounts
     cleanupOldImages();
     
-    // Schedule cleanup to run daily
-    const dailyCleanup = setInterval(cleanupOldImages, 86400000); // 24 hours
+    const dailyCleanup = setInterval(cleanupOldImages, 86400000);
     
     return () => clearInterval(dailyCleanup);
   }, []);
 
-  // Monitor online/offline status
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
@@ -132,7 +124,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Load data from localStorage on initial mount
   useEffect(() => {
     const loadedChildScreening = localStorage.getItem('childScreening');
     const loadedFMT = localStorage.getItem('awarenessSessionsFMT');
@@ -163,7 +154,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Save data to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('childScreening', JSON.stringify(childScreening));
     localStorage.setItem('awarenessSessionsFMT', JSON.stringify(awarenessSessionsFMT));
@@ -286,7 +276,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateChildScreening = async (id: string, data: Partial<ChildScreeningData>) => {
     if (!currentUser) return;
     
-    // Check if user has permission to edit (developer or master)
     if (currentUser.role !== 'developer' && currentUser.role !== 'master') {
       toast({
         title: "Permission denied",
@@ -313,7 +302,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateAwarenessSession = async (id: string, data: Partial<AwarenessSessionData>) => {
     if (!currentUser) return;
     
-    // Check if user has permission to edit (developer or master)
     if (currentUser.role !== 'developer' && currentUser.role !== 'master') {
       toast({
         title: "Permission denied",
@@ -323,7 +311,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    // Check if it's an FMT or SM session
     const isFMT = awarenessSessionsFMT.some(session => session.id === id);
     
     if (isFMT) {
@@ -390,7 +377,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Export images separately if requested
   const exportImages = (data: (ChildScreeningData | AwarenessSessionData)[], type: string) => {
     let imagesExported = 0;
     
@@ -401,7 +387,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const date = new Date(item.date).toISOString().split('T')[0];
           const fileName = `${type}_${name}_${date}_image${index+1}.png`;
           
-          // For base64 images, create a downloadable link
           if (imageData.startsWith('data:image')) {
             const link = document.createElement('a');
             link.href = imageData;
@@ -439,7 +424,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (type === 'child') {
       let filteredData = childScreening;
       
-      // Apply time filter
       if (filter === 'today') {
         filteredData = filteredData.filter(item => 
           new Date(item.date).toDateString() === today
@@ -448,12 +432,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const title = `Child Screening Data - ${filter === 'today' ? currentDate : 'All Records'}`;
       
-      // Export images if requested
       if (options?.includeImages) {
         exportImages(filteredData, 'child_screening');
       }
       
-      exportChildScreeningToExcel(filteredData, {
+      exportChildScreening(filteredData, {
         filterSam: filter === 'sam',
         filterMam: filter === 'mam',
         workerSplit: options?.workerSplit,
@@ -475,13 +458,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const title = `FMT Awareness Sessions - ${filter === 'today' ? currentDate : 'All Records'}`;
       
-      // Export images if requested
       if (options?.includeImages) {
         exportImages(filteredData, 'fmt_session');
       }
       
-      exportAwarenessSessionToExcel(filteredData, {
-        type: 'FMT',
+      exportAwarenessSessions(filteredData, 'fmt', {
         title: title,
         removeWorkerId: options?.removeWorkerId,
         removeImagesColumn: options?.removeImagesColumn,
@@ -500,13 +481,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const title = `Social Mobilizer Awareness Sessions - ${filter === 'today' ? currentDate : 'All Records'}`;
       
-      // Export images if requested
       if (options?.includeImages) {
         exportImages(filteredData, 'sm_session');
       }
       
-      exportAwarenessSessionToExcel(filteredData, {
-        type: 'Social Mobilizers',
+      exportAwarenessSessions(filteredData, 'sm', {
         title: title,
         removeWorkerId: options?.removeWorkerId,
         removeImagesColumn: options?.removeImagesColumn,
