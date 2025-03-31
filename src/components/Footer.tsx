@@ -4,12 +4,10 @@ export function Footer() {
 
   return (
     <footer className="w-full border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex flex-col md:flex-row items-center justify-between py-6 gap-4">
-        <div className="flex flex-col items-center md:items-start">
-          <span className="text-sm text-muted-foreground">
-            © {currentYear} Track4Health. All rights reserved.
-          </span>
-        </div>
+      <div className="container flex items-center justify-center py-6">
+        <span className="text-sm text-muted-foreground whitespace-nowrap">
+          © {currentYear} Track4Health. All rights reserved.
+        </span>
       </div>
     </footer>
   );

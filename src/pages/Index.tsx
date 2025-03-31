@@ -75,11 +75,11 @@ const Index = () => {
                   </Button>
                 </div>
               </div>
-              <div className="mx-auto lg:ml-auto flex items-center justify-center">
+              <div className="order-first lg:order-last mx-auto lg:ml-auto flex items-center justify-center">
                 <img 
                   src="https://unicphscat.blob.core.windows.net/images-prd/s0145620.png" 
                   alt="UNICEF Health Worker" 
-                  className="rounded-lg object-cover max-h-[400px] shadow-xl" 
+                  className="rounded-lg object-cover h-auto max-w-full max-h-[400px] shadow-xl" 
                 />
               </div>
             </div>

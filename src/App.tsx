@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -28,7 +27,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
+      <ThemeProvider defaultTheme="light">
         <AuthProvider>
           <DataProvider>
             <Router>
@@ -48,15 +47,21 @@ function App() {
                   </RequireAuth>
                 } />
                 
+                <Route path="/awareness-sessions" element={
+                  <RequireAuth>
+                    <AwarenessSession />
+                  </RequireAuth>
+                } />
+                
                 <Route path="/fmt-awareness" element={
                   <RequireAuth>
-                    <AwarenessSession type="fmt" />
+                    <Navigate to="/awareness-sessions?type=fmt" replace />
                   </RequireAuth>
                 } />
                 
                 <Route path="/sm-awareness" element={
                   <RequireAuth>
-                    <AwarenessSession type="sm" />
+                    <Navigate to="/awareness-sessions?type=sm" replace />
                   </RequireAuth>
                 } />
                 

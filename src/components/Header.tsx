@@ -138,21 +138,10 @@ export function Header() {
                 <NavigationMenuItem>
                   <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
                     <Link 
-                      to="/fmt-awareness" 
-                      className={location.pathname === "/fmt-awareness" ? "text-foreground" : "text-muted-foreground"}
+                      to="/awareness-sessions" 
+                      className={location.pathname.includes("/awareness") ? "text-foreground" : "text-muted-foreground"}
                     >
-                      FMT Sessions
-                    </Link>
-                  </NavigationMenuLink>
-                </NavigationMenuItem>
-                
-                <NavigationMenuItem>
-                  <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                    <Link 
-                      to="/sm-awareness" 
-                      className={location.pathname === "/sm-awareness" ? "text-foreground" : "text-muted-foreground"}
-                    >
-                      SM Sessions
+                      Awareness Sessions
                     </Link>
                   </NavigationMenuLink>
                 </NavigationMenuItem>
@@ -162,7 +151,7 @@ export function Header() {
           
           {isAuthenticated && (
             <>
-              {(currentUser?.role === 'developer' || currentUser?.role === 'master') && (
+              {(currentUser?.role === 'developer') && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -252,24 +241,15 @@ export function Header() {
             </Link>
             
             <Link 
-              to="/fmt-awareness" 
+              to="/awareness-sessions" 
               className="flex items-center gap-2 p-2 rounded-md hover:bg-accent"
               onClick={closeMobileMenu}
             >
               <UserCheck className="h-4 w-4" />
-              <span>FMT Sessions</span>
+              <span>Awareness Sessions</span>
             </Link>
             
-            <Link 
-              to="/sm-awareness" 
-              className="flex items-center gap-2 p-2 rounded-md hover:bg-accent"
-              onClick={closeMobileMenu}
-            >
-              <Users className="h-4 w-4" />
-              <span>SM Sessions</span>
-            </Link>
-            
-            {(currentUser?.role === 'developer' || currentUser?.role === 'master') && (
+            {currentUser?.role === 'developer' && (
               <>
                 <Link 
                   to="/user-management" 
@@ -289,27 +269,29 @@ export function Header() {
                   <MapPin className="h-4 w-4 mr-2" />
                   <span>Research Assistants</span>
                 </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSync}
-                  disabled={syncLoading}
-                  className="justify-start pl-2"
-                >
-                  {syncLoading ? "Syncing..." : "Sync Data"}
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleLogout}
-                  className="justify-start pl-2"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  <span>Logout</span>
-                </Button>
               </>
+            )}
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSync}
+              disabled={syncLoading}
+              className="justify-start pl-2"
+            >
+              {syncLoading ? "Syncing..." : "Sync Data"}
+            </Button>
+            
+            {(currentUser?.role === 'developer' || currentUser?.role === 'master') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="justify-start pl-2"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                <span>Logout</span>
+              </Button>
             )}
           </nav>
         </div>

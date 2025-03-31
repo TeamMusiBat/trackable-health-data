@@ -27,6 +27,7 @@ export interface ChildScreeningData extends BaseEntry {
 // Awareness session data
 export interface AwarenessSessionData extends BaseEntry {
   serialNo: number;
+  sessionNumber: number; // Added session number field
   name: string;
   fatherOrHusband: string;
   age: number;
@@ -34,8 +35,15 @@ export interface AwarenessSessionData extends BaseEntry {
   ucName: string;
   underFiveChildren: number;
   contactNumber: string;
+  sameUc: boolean; // Added sameUc field
+  alternateLocation?: string; // Added alternateLocation field
+  locationCoords?: {  // Added location coordinates
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+  };
   type: 'FMT' | 'Social Mobilizers';
-  images?: string[]; // Add images field
+  images?: string[];
 }
 
 // User role type
@@ -48,27 +56,27 @@ export interface User {
   email: string;
   role: UserRole;
   active: boolean;
-  username?: string; // Optional fields to fix type errors
+  username?: string;
   password?: string;
   online?: boolean;
   lastActive?: Date;
-  phone?: string; // Add phone property to fix the type error
+  phone?: string;
   location?: {
     latitude: number;
     longitude: number;
-    accuracy?: number; // Added accuracy field for precise location tracking
+    accuracy?: number;
   };
 }
 
 // Update AwarenessSession component props to match the casing in App.tsx
 export interface AwarenessSessionProps {
-  type: "fmt" | "sm";
+  type?: "fmt" | "sm";
 }
 
 // Duplicate entry check result
 export interface DuplicateEntry {
   exists: boolean;
-  data?: ChildScreeningData;
+  data?: ChildScreeningData | AwarenessSessionData;
 }
 
 // Export options
@@ -79,10 +87,10 @@ export interface ExportOptions {
   type?: string;
   title?: string;
   workerSplit?: boolean;
-  removeWorkerId?: boolean; // Add option to remove worker ID column
-  removeImagesColumn?: boolean; // Add option to remove images column
-  pakistaniTime?: boolean; // Add option for Pakistani time
-  removeDuplicates?: boolean; // Add option to remove duplicate entries
+  removeWorkerId?: boolean;
+  removeImagesColumn?: boolean;
+  pakistaniTime?: boolean;
+  removeDuplicates?: boolean;
 }
 
 // Editable record marker

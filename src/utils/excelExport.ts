@@ -1,434 +1,313 @@
+
 import * as XLSX from 'xlsx';
 import { ChildScreeningData, AwarenessSessionData, ExportOptions } from '@/lib/types';
 
-// Apply styling to Excel headers
-const applyHeaderStyle = (worksheet: XLSX.WorkSheet): void => {
-  // Get column range
-  const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
-  const colCount = range.e.c + 1;
+// Helper function to convert date to Pakistani time
+const toPakistaniTime = (date: Date | string): string => {
+  if (!date) return '';
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
   
-  // Apply style to first row (header)
-  for (let col = 0; col < colCount; col++) {
-    const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
-    const cell = worksheet[cellAddress];
-    if (!cell) continue;
-    
-    // Create formatting object if it doesn't exist
-    if (!cell.s) cell.s = {};
-    
-    // Apply bold, center alignment, fill color
-    cell.s = {
-      ...cell.s,
-      font: { bold: true, sz: 12 }, // Slightly larger than data text
-      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
-      fill: { fgColor: { rgb: 'E1E1E1' } },
-      border: {
-        top: { style: 'thin' },
-        bottom: { style: 'thin' },
-        left: { style: 'thin' },
-        right: { style: 'thin' }
-      }
-    };
-  }
+  // Pakistan is UTC+5
+  const pakistaniTime = new Date(dateObj.getTime() + (5 * 60 * 60 * 1000));
+  
+  // Format as DD/MM/YYYY HH:MM
+  return `${pakistaniTime.getDate().toString().padStart(2, '0')}/${
+    (pakistaniTime.getMonth() + 1).toString().padStart(2, '0')}/${
+    pakistaniTime.getFullYear()} ${
+    pakistaniTime.getHours().toString().padStart(2, '0')}:${
+    pakistaniTime.getMinutes().toString().padStart(2, '0')}`;
 };
 
-// Apply MUAC-based color coding for child screening data
-const applyMuacFormatting = (worksheet: XLSX.WorkSheet, dataRows: ChildScreeningData[]): void => {
-  // Get column range
-  const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+// Helper function to get nutrition status based on MUAC
+const getNutritionStatus = (muac: number): string => {
+  if (muac <= 11) return 'SAM';
+  if (muac <= 12) return 'MAM';
+  return 'Normal';
+};
+
+// Helper function to remove duplicates based on name, father, and village
+const removeDuplicates = <T extends ChildScreeningData | AwarenessSessionData>(
+  data: T[]
+): T[] => {
+  const uniqueMap = new Map();
   
-  // Find MUAC column index
-  let muacColIndex = -1;
-  for (let col = 0; col <= range.e.c; col++) {
-    const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
-    if (worksheet[cellAddress]?.v === 'MUAC') {
-      muacColIndex = col;
-      break;
-    }
-  }
-  
-  if (muacColIndex === -1) return; // MUAC column not found
-  
-  // Apply color based on MUAC value to entire row
-  dataRows.forEach((row, idx) => {
-    const rowIndex = idx + 1; // +1 to skip header row
-    
-    let bgColor = 'CCFFCC'; // Light green for normal (default)
-    
-    if (row.muac <= 11) { // SAM
-      bgColor = 'FF9999'; // Light red for SAM
-    } else if (row.muac <= 12) { // MAM
-      bgColor = 'FFCC99'; // Light orange for MAM
+  return data.filter(item => {
+    // For child screening data
+    if ('father' in item) {
+      const key = `${item.name}|${item.father}|${item.village}`;
+      if (uniqueMap.has(key)) return false;
+      uniqueMap.set(key, true);
+      return true;
     }
     
-    // Apply to all cells in the row
-    for (let col = 0; col <= range.e.c; col++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: col });
-      const cell = worksheet[cellAddress];
-      if (!cell) continue;
-      
-      // Create or get existing style object
-      if (!cell.s) cell.s = {};
-      
-      // Apply row color
-      cell.s.fill = { fgColor: { rgb: bgColor } };
+    // For awareness session data
+    if ('fatherOrHusband' in item) {
+      const key = `${item.name}|${item.fatherOrHusband}|${item.villageName}`;
+      if (uniqueMap.has(key)) return false;
+      uniqueMap.set(key, true);
+      return true;
     }
+    
+    return true;
   });
 };
 
-// Set column widths based on content
-const setColumnWidths = (worksheet: XLSX.WorkSheet): void => {
-  // Get column range
-  const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
-  const colCount = range.e.c + 1;
-  const rowCount = range.e.r + 1;
-  
-  // Initialize column width array
-  const colWidths: number[] = Array(colCount).fill(10); // Default width
-  
-  // Check all cells for content length
-  for (let row = 0; row < rowCount; row++) {
-    for (let col = 0; col < colCount; col++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
-      const cell = worksheet[cellAddress];
-      if (!cell || !cell.v) continue;
-      
-      // Get string length
-      const cellValue = String(cell.v);
-      const cellWidth = cellValue.length + 2; // +2 for padding
-      
-      // Update column width if this cell is wider
-      colWidths[col] = Math.max(colWidths[col], cellWidth);
-    }
-  }
-  
-  // Set column widths (max width is 40)
-  colWidths.forEach((width, idx) => {
-    const colName = XLSX.utils.encode_col(idx);
-    worksheet['!cols'] = worksheet['!cols'] || [];
-    worksheet['!cols'][idx] = { wch: Math.min(width, 40) };
+// Helper function to capitalize first letter of each word
+const capitalizeWords = (str: string): string => {
+  if (!str) return '';
+  return str.replace(/\w\S*/g, (txt) => {
+    return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
   });
-  
-  // Enable text wrapping for all data cells
-  for (let row = 1; row < rowCount; row++) { // Skip header
-    for (let col = 0; col < colCount; col++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
-      const cell = worksheet[cellAddress];
-      if (!cell) continue;
-      
-      // Create style object if it doesn't exist
-      if (!cell.s) cell.s = {};
-      
-      // Enable text wrapping
-      cell.s.alignment = { ...(cell.s.alignment || {}), wrapText: true };
-    }
-  }
 };
 
-// Add title to worksheet with improved formatting
-const addTitle = (worksheet: XLSX.WorkSheet, title: string): void => {
-  // Get column range
-  const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
-  const colCount = range.e.c + 1;
-  
-  // Shift all existing cells down by 2 rows
-  const newWorksheet: Record<string, any> = {};
-  for (const cellAddress in worksheet) {
-    if (cellAddress.startsWith('!')) {
-      newWorksheet[cellAddress] = worksheet[cellAddress];
-      continue;
-    }
-    
-    const cell = worksheet[cellAddress];
-    const cellRef = XLSX.utils.decode_cell(cellAddress);
-    const newCellAddress = XLSX.utils.encode_cell({ r: cellRef.r + 2, c: cellRef.c });
-    newWorksheet[newCellAddress] = cell;
+export const exportChildScreening = (data: ChildScreeningData[], options: ExportOptions = {}) => {
+  if (!data || data.length === 0) {
+    alert('No data to export');
+    return;
   }
   
-  // Update range
-  if (range.e.r >= 0) {
-    newWorksheet['!ref'] = XLSX.utils.encode_range({
-      s: { r: 0, c: 0 },
-      e: { r: range.e.r + 2, c: range.e.c }
-    });
+  let exportData = [...data];
+  
+  // Apply filters
+  if (options.filterSam) {
+    exportData = exportData.filter(child => child.muac <= 11);
+  }
+  else if (options.filterMam) {
+    exportData = exportData.filter(child => child.muac > 11 && child.muac <= 12);
   }
   
-  // Copy column widths
-  if (worksheet['!cols']) {
-    newWorksheet['!cols'] = worksheet['!cols'];
-  }
-  
-  // Add title cell with enhanced styling
-  const titleCell = XLSX.utils.encode_cell({ r: 0, c: 0 });
-  newWorksheet[titleCell] = { 
-    v: title, 
-    t: 's',
-    s: {
-      font: { bold: true, sz: 16 }, // Larger font for title
-      alignment: { horizontal: 'center', vertical: 'center' },
-      fill: { fgColor: { rgb: 'F1F0FB' } }, // Light background for title
-    }
-  };
-  
-  // Merge cells for title
-  if (!newWorksheet['!merges']) newWorksheet['!merges'] = [];
-  newWorksheet['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: colCount - 1 } });
-  
-  // Replace worksheet with new one
-  Object.assign(worksheet, newWorksheet);
-};
-
-// Remove duplicate entries from data array
-const removeDuplicates = <T extends { name: string, date: Date }>(data: T[]): T[] => {
-  const uniqueMap = new Map<string, T>();
-  
-  data.forEach(item => {
-    const dateString = new Date(item.date).toDateString();
-    const key = `${item.name}_${dateString}`;
-    
-    // If this is the first entry with this key, or we prefer to keep this one
-    if (!uniqueMap.has(key)) {
-      uniqueMap.set(key, item);
-    }
-  });
-  
-  return Array.from(uniqueMap.values());
-};
-
-// Convert date to Pakistani time format
-const formatDateToPakistani = (date: Date): string => {
-  const options: Intl.DateTimeFormatOptions = { 
-    year: 'numeric', 
-    month: 'numeric', 
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Asia/Karachi'
-  };
-  
-  return new Date(date).toLocaleString('en-PK', options);
-};
-
-// Export child screening data to Excel
-export const exportChildScreeningToExcel = (
-  data: ChildScreeningData[],
-  options: {
-    fileName?: string;
-    filterSam?: boolean;
-    filterMam?: boolean;
-    workerSplit?: boolean;
-    title?: string;
-    removeWorkerId?: boolean;
-    removeImagesColumn?: boolean;
-    pakistaniTime?: boolean;
-    removeDuplicates?: boolean;
-  } = {}
-): void => {
-  // Apply filters and remove duplicates if needed
-  let filteredData = [...data];
-  
+  // Remove duplicates if requested
   if (options.removeDuplicates) {
-    filteredData = removeDuplicates(filteredData);
+    exportData = removeDuplicates(exportData);
   }
   
-  if (options.filterSam && !options.filterMam) {
-    filteredData = filteredData.filter(item => item.muac <= 11);
-  } else if (options.filterMam && !options.filterSam) {
-    filteredData = filteredData.filter(item => item.muac > 11 && item.muac <= 12);
-  } else if (options.filterSam && options.filterMam) {
-    filteredData = filteredData.filter(item => item.muac <= 12);
+  if (exportData.length === 0) {
+    alert('No data matches the selected filters');
+    return;
   }
   
-  // Create workbook
-  const wb = XLSX.utils.book_new();
+  // Extract worker ID from the first entry if needed
+  const workerId = exportData[0]?.userId || 'unknown';
   
-  if (options.workerSplit) {
-    // Group by user ID
-    const userGroups: Record<string, ChildScreeningData[]> = {};
-    filteredData.forEach(item => {
-      if (!userGroups[item.userId]) {
-        userGroups[item.userId] = [];
-      }
-      userGroups[item.userId].push(item);
-    });
+  // Transform data for export
+  const formattedData = exportData.map(child => {
+    const nutritionStatus = getNutritionStatus(child.muac);
     
-    // Create sheet for each user
-    Object.entries(userGroups).forEach(([userId, userData]) => {
-      const sheetData = userData.map(item => {
-        // Base data object
-        const rowData: Record<string, any> = {
-          'Serial No': item.serialNo,
-          'Date': options.pakistaniTime ? formatDateToPakistani(item.date) : new Date(item.date).toLocaleDateString(),
-          'Child Name': item.name,
-          'Father Name': item.father,
-          'Age (months)': item.age,
-          'MUAC': item.muac,
-          'Gender': item.gender,
-          'District': item.district,
-          'Union Council': item.unionCouncil,
-          'Village': item.village,
-          'Vaccination': item.vaccination,
-          'Due Vaccine': item.dueVaccine ? 'Yes' : 'No',
-          'Remarks': item.remarks
-        };
-        
-        // Add optional columns
-        if (!options.removeWorkerId) {
-          rowData['Worker ID'] = item.userId;
-        }
-        
-        if (!options.removeImagesColumn) {
-          rowData['Images'] = item.images && item.images.length > 0 ? `${item.images.length} images` : "None";
-        }
-        
-        return rowData;
-      });
-      
-      // Create worksheet
-      const ws = XLSX.utils.json_to_sheet(sheetData);
-      
-      // Apply formatting
-      applyHeaderStyle(ws);
-      applyMuacFormatting(ws, userData);
-      setColumnWidths(ws);
-      
-      // Add title
-      const title = options.title || `Research Assistant ${userId} - Child Screening Data`;
-      addTitle(ws, title);
-      
-      // Add to workbook
-      XLSX.utils.book_append_sheet(wb, ws, `Worker ${userId}`);
-    });
-  } else {
-    // Create single sheet with all data
-    const sheetData = filteredData.map(item => {
-      // Base data object
-      const rowData: Record<string, any> = {
-        'Serial No': item.serialNo,
-        'Date': options.pakistaniTime ? formatDateToPakistani(item.date) : new Date(item.date).toLocaleDateString(),
-        'Child Name': item.name,
-        'Father Name': item.father,
-        'Age (months)': item.age,
-        'MUAC': item.muac,
-        'Gender': item.gender,
-        'District': item.district,
-        'Union Council': item.unionCouncil,
-        'Village': item.village,
-        'Vaccination': item.vaccination,
-        'Due Vaccine': item.dueVaccine ? 'Yes' : 'No',
-        'Remarks': item.remarks
-      };
-      
-      // Add optional columns
-      if (!options.removeWorkerId) {
-        rowData['Worker ID'] = item.userId;
-      }
-      
-      if (!options.removeImagesColumn) {
-        rowData['Images'] = item.images && item.images.length > 0 ? `${item.images.length} images` : "None";
-      }
-      
-      return rowData;
-    });
-    
-    // Create worksheet
-    const ws = XLSX.utils.json_to_sheet(sheetData);
-    
-    // Apply formatting
-    applyHeaderStyle(ws);
-    applyMuacFormatting(ws, filteredData);
-    setColumnWidths(ws);
-    
-    // Add title
-    const title = options.title || 'Child Screening Data';
-    addTitle(ws, title);
-    
-    // Add to workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'Child Screening');
-  }
-  
-  // Generate filename
-  const fileType = options.filterSam && options.filterMam ? 'SAM-MAM' : 
-                  options.filterSam ? 'SAM' : 
-                  options.filterMam ? 'MAM' : 'All';
-  
-  const fileName = options.fileName || 
-    `child-screening-${fileType}-${new Date().toISOString().split('T')[0]}.xlsx`;
-  
-  // Export workbook
-  XLSX.writeFile(wb, fileName);
-};
-
-// Export awareness session data to Excel
-export const exportAwarenessSessionToExcel = (
-  data: AwarenessSessionData[],
-  options: {
-    fileName?: string;
-    title?: string;
-    type?: 'FMT' | 'Social Mobilizers';
-    removeWorkerId?: boolean;
-    removeImagesColumn?: boolean;
-    pakistaniTime?: boolean;
-    removeDuplicates?: boolean;
-  } = {}
-): void => {
-  // Filter by type if needed and remove duplicates if requested
-  let filteredData = options.type ? data.filter(item => item.type === options.type) : data;
-  
-  if (options.removeDuplicates) {
-    filteredData = removeDuplicates(filteredData);
-  }
-  
-  // Create workbook
-  const wb = XLSX.utils.book_new();
-  
-  // Create single sheet with all data
-  const sheetData = filteredData.map(item => {
-    // Base data object
-    const rowData: Record<string, any> = {
-      'Date': options.pakistaniTime ? formatDateToPakistani(item.date) : new Date(item.date).toLocaleDateString(),
-      'Name': item.name,
-      'Father/Husband': item.fatherOrHusband,
-      'Age': item.age,
-      'Under Five Children': item.underFiveChildren,
-      'Village': item.villageName,
-      'Union Council': item.ucName,
-      'Contact Number': item.contactNumber,
-      'Type': item.type
+    const row: any = {
+      'Name': capitalizeWords(child.name),
+      'Father Name': capitalizeWords(child.father),
+      'Age': child.age,
+      'Gender': child.gender,
+      'MUAC': child.muac,
+      'District': child.district,
+      'UC': child.unionCouncil,
+      'Village': child.village,
+      'Vaccination': child.vaccination,
+      'Due Vaccine': child.dueVaccine ? 'Yes' : 'No',
+      'Remarks': child.remarks || nutritionStatus,
+      'Date': options.pakistaniTime 
+        ? toPakistaniTime(child.date)
+        : new Date(child.date).toLocaleString(),
     };
     
-    // Add optional columns
+    // Include additional fields based on options
     if (!options.removeWorkerId) {
-      rowData['Worker ID'] = item.userId;
+      row['Worker ID'] = child.userId;
     }
     
-    if (!options.removeImagesColumn) {
-      rowData['Images'] = item.images && item.images.length > 0 ? `${item.images.length} images` : "None";
+    if (options.includeImages && !options.removeImagesColumn) {
+      row['Images'] = child.images?.length || 0;
     }
     
-    return rowData;
+    return row;
   });
   
-  // Create worksheet
-  const ws = XLSX.utils.json_to_sheet(sheetData);
+  // Create workbook and worksheet
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(formattedData, { header: Object.keys(formattedData[0]) });
   
-  // Apply formatting
-  applyHeaderStyle(ws);
-  setColumnWidths(ws);
+  // Set title
+  const title = options.title || 'Child Screening Data';
   
-  // Add title
-  const sessionType = options.type || 'All';
-  const title = options.title || `${sessionType} Awareness Sessions`;
-  addTitle(ws, title);
+  // Set column widths and apply styling
+  const colWidths = [
+    { wch: 20 }, // Name
+    { wch: 20 }, // Father
+    { wch: 8 },  // Age
+    { wch: 10 }, // Gender
+    { wch: 8 },  // MUAC
+    { wch: 15 }, // District
+    { wch: 20 }, // UC
+    { wch: 25 }, // Village
+    { wch: 15 }, // Vaccination
+    { wch: 12 }, // Due Vaccine
+    { wch: 15 }, // Remarks
+    { wch: 20 }, // Date
+  ];
   
-  // Add to workbook
-  const sheetName = options.type || 'Awareness';
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  if (!options.removeWorkerId) {
+    colWidths.push({ wch: 20 }); // Worker ID
+  }
   
-  // Generate filename
-  const fileName = options.fileName || 
-    `awareness-sessions-${options.type || 'all'}-${new Date().toISOString().split('T')[0]}.xlsx`;
+  if (options.includeImages && !options.removeImagesColumn) {
+    colWidths.push({ wch: 10 }); // Images
+  }
   
-  // Export workbook
-  XLSX.writeFile(wb, fileName);
+  ws['!cols'] = colWidths;
+  
+  // Style the sheet (using merge cells for title)
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: Object.keys(formattedData[0]).length - 1 } }];
+  
+  // Insert title row at the top and merge cells
+  XLSX.utils.sheet_add_aoa(ws, [[title]], { origin: 'A1' });
+  
+  // Apply MUAC-based formatting (R=SAM, Y=MAM, G=Normal)
+  for (let i = 0; i < formattedData.length; i++) {
+    const rowIndex = i + 2; // +2 because of title row and header row
+    const muacValue = exportData[i]?.muac;
+    
+    // Set the fill color based on MUAC value
+    if (muacValue <= 11) { // SAM - Red
+      ws[`E${rowIndex}`] = { v: muacValue, s: { fill: { fgColor: { rgb: 'FFFF0000' } } } };
+      ws[`K${rowIndex}`] = { v: 'SAM', s: { fill: { fgColor: { rgb: 'FFFF0000' } } } };
+    } else if (muacValue <= 12) { // MAM - Yellow
+      ws[`E${rowIndex}`] = { v: muacValue, s: { fill: { fgColor: { rgb: 'FFFFFF00' } } } };
+      ws[`K${rowIndex}`] = { v: 'MAM', s: { fill: { fgColor: { rgb: 'FFFFFF00' } } } };
+    } else { // Normal - Green
+      ws[`E${rowIndex}`] = { v: muacValue, s: { fill: { fgColor: { rgb: 'FF00FF00' } } } };
+      ws[`K${rowIndex}`] = { v: 'Normal', s: { fill: { fgColor: { rgb: 'FF00FF00' } } } };
+    }
+  }
+  
+  // Add worksheet to workbook
+  XLSX.utils.book_append_sheet(wb, ws, 'Child Screening');
+  
+  // Format the filename to include date and filter info
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  
+  let filename = `Child_Screening_${dateStr}`;
+  if (options.filterSam) filename += '_SAM';
+  if (options.filterMam) filename += '_MAM';
+  if (!options.workerSplit) filename += `_Worker-${workerId}`;
+  
+  // Generate Excel file
+  XLSX.writeFile(wb, `${filename}.xlsx`);
+};
+
+export const exportAwarenessSessions = (
+  data: AwarenessSessionData[], 
+  type: string, 
+  options: ExportOptions = {}
+) => {
+  if (!data || data.length === 0) {
+    alert('No data to export');
+    return;
+  }
+  
+  let exportData = [...data];
+  
+  // Remove duplicates if requested
+  if (options.removeDuplicates) {
+    exportData = removeDuplicates(exportData);
+  }
+  
+  if (exportData.length === 0) {
+    alert('No data matches the selected filters');
+    return;
+  }
+  
+  // Extract worker ID from the first entry if needed
+  const workerId = exportData[0]?.userId || 'unknown';
+  
+  // Transform data for export
+  const formattedData = exportData.map(session => {
+    const row: any = {
+      'Session Number': session.sessionNumber || 1,
+      'Name': capitalizeWords(session.name),
+      'Father/Husband': capitalizeWords(session.fatherOrHusband),
+      'Age': session.age,
+      'Under 5 Children': session.underFiveChildren,
+      'Village': session.villageName,
+      'UC': session.ucName,
+      'Same UC': session.sameUc ? 'Yes' : 'No',
+      'Alternate Location': session.alternateLocation || '',
+      'Contact': session.contactNumber || '',
+      'Date': options.pakistaniTime 
+        ? toPakistaniTime(session.date)
+        : new Date(session.date).toLocaleString(),
+    };
+    
+    // Include additional fields based on options
+    if (!options.removeWorkerId) {
+      row['Worker ID'] = session.userId;
+    }
+    
+    if (options.includeImages && !options.removeImagesColumn) {
+      row['Images'] = session.images?.length || 0;
+    }
+    
+    // Add location coordinates if available
+    if (session.locationCoords) {
+      row['GPS Coordinates'] = `${session.locationCoords.latitude.toFixed(6)}, ${session.locationCoords.longitude.toFixed(6)}`;
+    }
+    
+    return row;
+  });
+  
+  // Create workbook and worksheet
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(formattedData, { header: Object.keys(formattedData[0]) });
+  
+  // Set title
+  const title = options.title || `${type === 'fmt' ? 'FMT' : 'Social Mobilizers'} Awareness Sessions`;
+  
+  // Set column widths
+  const colWidths = [
+    { wch: 15 }, // Session Number
+    { wch: 20 }, // Name
+    { wch: 20 }, // Father/Husband
+    { wch: 8 },  // Age
+    { wch: 15 }, // Under 5
+    { wch: 25 }, // Village
+    { wch: 20 }, // UC
+    { wch: 10 }, // Same UC
+    { wch: 25 }, // Alternate Location
+    { wch: 15 }, // Contact
+    { wch: 20 }, // Date
+  ];
+  
+  if (!options.removeWorkerId) {
+    colWidths.push({ wch: 20 }); // Worker ID
+  }
+  
+  if (options.includeImages && !options.removeImagesColumn) {
+    colWidths.push({ wch: 10 }); // Images
+  }
+  
+  // Add GPS coordinates column width if any entry has coordinates
+  if (exportData.some(session => session.locationCoords)) {
+    colWidths.push({ wch: 25 }); // GPS Coordinates
+  }
+  
+  ws['!cols'] = colWidths;
+  
+  // Style the sheet (using merge cells for title)
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: Object.keys(formattedData[0]).length - 1 } }];
+  
+  // Insert title row at the top and merge cells
+  XLSX.utils.sheet_add_aoa(ws, [[title]], { origin: 'A1' });
+  
+  // Add worksheet to workbook
+  XLSX.utils.book_append_sheet(wb, ws, 'Awareness Sessions');
+  
+  // Format the filename
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  
+  let filename = `${type === 'fmt' ? 'FMT' : 'SM'}_Awareness_Sessions_${dateStr}`;
+  if (!options.workerSplit) filename += `_Worker-${workerId}`;
+  
+  // Generate Excel file
+  XLSX.writeFile(wb, `${filename}.xlsx`);
 };

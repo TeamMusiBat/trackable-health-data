@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
 import { Button } from "@/components/ui/button";
@@ -11,11 +12,9 @@ import {
   CheckCheck, 
   Database, 
   FileSpreadsheet, 
-  MapPin, 
   Users, 
   CalendarDays, 
   AlertTriangle,
-  Phone,
   Map
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -85,10 +84,6 @@ const Dashboard = () => {
       title: "Locations Available",
       description: `${mockLocations.length} research assistants' locations loaded`,
     });
-  };
-
-  const handleWhatsAppContact = () => {
-    window.open("https://wa.me/923032939576", "_blank");
   };
 
   const handleExportScreening = (filter: 'today' | 'all' | 'sam' | 'mam' = 'today') => {
@@ -309,7 +304,7 @@ const Dashboard = () => {
                   Export Awareness Sessions
                 </Button>
                 
-                {(currentUser?.role === 'developer' || currentUser?.role === 'master') && (
+                {currentUser?.role === 'developer' && (
                   <Button 
                     className="w-full justify-start" 
                     variant={isMobile ? "outline" : "outline"}
@@ -319,15 +314,6 @@ const Dashboard = () => {
                     View Research Assistant Locations
                   </Button>
                 )}
-                
-                <Button 
-                  className="w-full justify-start" 
-                  variant="outline"
-                  onClick={handleWhatsAppContact}
-                >
-                  <Phone className="mr-2 h-4 w-4" />
-                  Contact Support (WhatsApp)
-                </Button>
               </div>
             </CardContent>
           </Card>
