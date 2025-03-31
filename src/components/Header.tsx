@@ -166,7 +166,7 @@ export function Header() {
                 variant="outline"
                 size="sm"
                 onClick={handleShowLocations}
-                className={`flex items-center gap-1 ${isMobile ? "hidden" : ""}`}
+                className="flex items-center gap-1"
               >
                 <MapPin className="h-4 w-4" />
                 <span className="hidden sm:inline">Research Assistants</span>

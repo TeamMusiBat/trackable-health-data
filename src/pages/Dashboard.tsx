@@ -20,6 +20,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { LocationsModal } from "@/components/LocationsModal";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const Dashboard = () => {
   const { currentUser, isAuthenticated } = useAuth();
@@ -39,6 +40,7 @@ const Dashboard = () => {
 
   const [locationModalOpen, setLocationModalOpen] = useState(false);
   const [fieldWorkerLocations, setFieldWorkerLocations] = useState<any[]>([]);
+  const [showRecentScreenings, setShowRecentScreenings] = useState(true);
 
   useEffect(() => {
     const today = new Date().toDateString();
@@ -102,6 +104,17 @@ const Dashboard = () => {
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
+
+  // Get recent screenings sorted by date (newest first)
+  const recentScreenings = [...childScreening]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);  // Show only the 5 most recent
+
+  const getMuacStatus = (muac: number) => {
+    if (muac <= 11) return { status: "SAM", color: "text-nutrition-sam" };
+    if (muac <= 12) return { status: "MAM", color: "text-nutrition-mam" };
+    return { status: "Normal", color: "text-nutrition-normal" };
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -202,6 +215,63 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
+        
+        {(currentUser?.role === 'developer' || currentUser?.role === 'master') && recentScreenings.length > 0 && (
+          <div className="mb-8">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Recent Screenings</CardTitle>
+                  <CardDescription>
+                    Latest child screening entries
+                  </CardDescription>
+                </div>
+                <Button variant="outline" onClick={() => navigate('/child-screening')}>
+                  View All
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border overflow-hidden mb-4">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Father's Name</TableHead>
+                        <TableHead>Village</TableHead>
+                        <TableHead>Age</TableHead>
+                        <TableHead>MUAC</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {recentScreenings.map((child) => {
+                        const status = getMuacStatus(child.muac);
+                        const rowColor = child.muac <= 11 ? "bg-red-50" : 
+                                        child.muac <= 12 ? "bg-yellow-50" : "bg-green-50";
+                        
+                        return (
+                          <TableRow key={child.id} className={rowColor}>
+                            <TableCell className="font-medium">{child.name}</TableCell>
+                            <TableCell>{child.fatherOrHusband}</TableCell>
+                            <TableCell>{child.villageName}</TableCell>
+                            <TableCell>{child.age} {typeof child.age === 'number' && 'years'}</TableCell>
+                            <TableCell>{child.muac} cm</TableCell>
+                            <TableCell className={status.color + " font-medium"}>
+                              {status.status}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Showing {recentScreenings.length} of {childScreening.length} screenings
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-2 hover:shadow-md transition-shadow">

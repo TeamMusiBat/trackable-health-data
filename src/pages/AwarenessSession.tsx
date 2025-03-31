@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
@@ -96,6 +97,7 @@ const AwarenessSession = () => {
   });
   
   const [bulkEntries, setBulkEntries] = useState<SessionFormData[]>([]);
+  const [locationCaptureInProgress, setLocationCaptureInProgress] = useState(false);
 
   const todayString = today.toDateString();
   const sessionsData = sessionType === "fmt" ? awarenessSessionsFMT : awarenessSessionsSM;
@@ -187,6 +189,8 @@ const AwarenessSession = () => {
   };
 
   const captureLocation = () => {
+    setLocationCaptureInProgress(true);
+    
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -202,9 +206,11 @@ const AwarenessSession = () => {
           }));
           
           toast({
-            title: "Location captured",
-            description: `Latitude: ${latitude.toFixed(4)}, Longitude: ${longitude.toFixed(4)}`,
+            title: "Location captured successfully",
+            description: `Latitude: ${latitude.toFixed(4)}, Longitude: ${longitude.toFixed(4)}, Accuracy: ${accuracy ? accuracy.toFixed(1) + 'm' : 'unknown'}`,
           });
+          
+          setLocationCaptureInProgress(false);
         },
         (error) => {
           toast({
@@ -212,8 +218,9 @@ const AwarenessSession = () => {
             description: error.message,
             variant: "destructive"
           });
+          setLocationCaptureInProgress(false);
         },
-        { enableHighAccuracy: true }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     } else {
       toast({
@@ -221,6 +228,7 @@ const AwarenessSession = () => {
         description: "Your browser does not support geolocation",
         variant: "destructive"
       });
+      setLocationCaptureInProgress(false);
     }
   };
 
@@ -245,7 +253,7 @@ const AwarenessSession = () => {
     
     setFormData({
       ...initialFormState,
-      sessionNumber: formData.sessionNumber,
+      sessionNumber: formData.sessionNumber + 1,
       villageName: formData.villageName,
       ucName: formData.ucName,
       sameUc: formData.sameUc,
@@ -278,7 +286,7 @@ const AwarenessSession = () => {
 
     await addAwarenessSession({
       ...formData,
-      serialNo: 0,
+      serialNo: 0, // No longer needed
       age: formData.age === '' ? 0 : parseInt(String(formData.age), 10),
       underFiveChildren: formData.underFiveChildren === '' ? 0 : parseInt(String(formData.underFiveChildren), 10),
       type: sessionType === "fmt" ? "FMT" : "Social Mobilizers" as any,
@@ -287,7 +295,7 @@ const AwarenessSession = () => {
 
     setFormData({
       ...initialFormState,
-      sessionNumber: formData.sessionNumber,
+      sessionNumber: formData.sessionNumber + 1,
       villageName: formData.villageName,
       ucName: formData.ucName,
       sameUc: formData.sameUc,
@@ -312,7 +320,7 @@ const AwarenessSession = () => {
 
     const processedEntries = bulkEntries.map(entry => ({
       ...entry,
-      serialNo: 0,
+      serialNo: 0, // No longer needed
       age: typeof entry.age === 'string' ? parseInt(entry.age || '0', 10) : entry.age,
       underFiveChildren: typeof entry.underFiveChildren === 'string' ? 
         parseInt(String(entry.underFiveChildren || '0'), 10) : entry.underFiveChildren,
@@ -325,7 +333,7 @@ const AwarenessSession = () => {
     setBulkEntries([]);
     setFormData({
       ...initialFormState,
-      sessionNumber: formData.sessionNumber + 1,
+      sessionNumber: formData.sessionNumber + processedEntries.length,
       villageName: formData.villageName,
       ucName: formData.ucName,
       sameUc: formData.sameUc,
@@ -456,13 +464,20 @@ const AwarenessSession = () => {
                         <div className="grid grid-cols-1 gap-4">
                           <Button 
                             type="button" 
-                            variant="outline" 
+                            variant={locationCaptureInProgress ? "secondary" : "outline"}
                             className="w-full flex gap-2"
                             onClick={captureLocation}
+                            disabled={locationCaptureInProgress}
                           >
                             <MapPin className="h-4 w-4" />
-                            Capture GPS Location
+                            {locationCaptureInProgress ? "Capturing Location..." : "Capture GPS Location"}
                           </Button>
+                          {formData.locationCoords && (
+                            <div className="text-xs text-center text-muted-foreground">
+                              Location: {formData.locationCoords.latitude.toFixed(5)}, {formData.locationCoords.longitude.toFixed(5)}
+                              {formData.locationCoords.accuracy && ` (±${formData.locationCoords.accuracy.toFixed(0)}m)`}
+                            </div>
+                          )}
                         </div>
                       </div>
                       
@@ -734,7 +749,7 @@ const AwarenessSession = () => {
                                       { name: "contactNumber", label: "Contact Number", type: "text" },
                                       { name: "villageName", label: "Village", type: "text" },
                                       { name: "ucName", label: "UC Name", type: "text" },
-                                      { name: "sameUc", label: "Same UC", type: "text" },
+                                      { name: "sameUc", label: "Same UC", type: "boolean" },
                                       { name: "alternateLocation", label: "Alternate Location", type: "text" },
                                       { name: "images", label: "Images", type: "images" }
                                     ]}
