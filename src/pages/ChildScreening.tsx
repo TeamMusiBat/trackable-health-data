@@ -31,7 +31,6 @@ import { toast } from "@/hooks/use-toast";
 import { ChildScreeningData, DuplicateEntry } from "@/lib/types";
 import { FileSpreadsheet, Plus, AlertTriangle, MapPin, Building, Wifi, WifiOff, Camera, Image as ImageIcon } from "lucide-react";
 
-// Define gender type to ensure consistency
 type Gender = "Male" | "Female" | "Other";
 
 const ChildScreening = () => {
@@ -56,7 +55,6 @@ const ChildScreening = () => {
   const [isBulkEntry, setIsBulkEntry] = useState(false);
   const [duplicateEntry, setDuplicateEntry] = useState<DuplicateEntry>({ exists: false });
 
-  // Add location state management:
   const storedLocation = localStorage.getItem('screeningLocation');
   let parsedLocation = { district: "", unionCouncil: "", village: "" };
 
@@ -68,7 +66,6 @@ const ChildScreening = () => {
     }
   }
 
-  // Update initial form state:
   const initialFormState = {
     name: "",
     father: "",
@@ -84,12 +81,10 @@ const ChildScreening = () => {
     images: [] as string[],
   };
 
-  // Add a locationSet state:
   const [locationSet, setLocationSet] = useState(
     !!(parsedLocation.district && parsedLocation.unionCouncil && parsedLocation.village)
   );
   
-  // Get today's data for display
   const today = new Date().toDateString();
   const todaysScreenings = childScreening.filter(
     item => new Date(item.date).toDateString() === today
@@ -99,7 +94,6 @@ const ChildScreening = () => {
     const { name, value, type } = e.target as HTMLInputElement;
     
     if (name === 'age' || name === 'muac') {
-      // Remove leading zeros for numeric fields
       const numValue = value === '' ? '' : String(parseFloat(value));
       setFormData({
         ...formData,
@@ -117,7 +111,6 @@ const ChildScreening = () => {
         [name]: value,
       });
       
-      // Update location in localStorage when location fields change
       if (['district', 'unionCouncil', 'village'].includes(name)) {
         const newLocation = {
           district: name === 'district' ? value : formData.district,
@@ -125,7 +118,6 @@ const ChildScreening = () => {
           village: name === 'village' ? value : formData.village
         };
         
-        // Only save if all fields have values
         if (newLocation.district && newLocation.unionCouncil && newLocation.village) {
           localStorage.setItem('screeningLocation', JSON.stringify(newLocation));
           setLocationSet(true);
@@ -151,12 +143,13 @@ const ChildScreening = () => {
       return;
     }
 
-    // Convert age and muac to numbers for type checking
     const parsedFormData = {
       ...formData,
       age: formData.age === '' ? 0 : parseFloat(String(formData.age)),
       muac: formData.muac === '' ? 0 : parseFloat(String(formData.muac)),
-      gender: formData.gender as Gender, // Ensure correct type
+      gender: formData.gender as Gender,
+      fatherOrHusband: formData.father,
+      villageName: formData.village,
     };
 
     const duplicate = checkDuplicate(parsedFormData);
@@ -165,7 +158,6 @@ const ChildScreening = () => {
       return;
     }
 
-    // Get the next serial number
     const nextSerialNo = childScreening.length + bulkEntries.length + 1;
     
     setBulkEntries((prev) => [
@@ -201,12 +193,13 @@ const ChildScreening = () => {
       return;
     }
 
-    // Convert age and muac to numbers for type checking
     const parsedFormData = {
       ...formData,
       age: formData.age === '' ? 0 : parseFloat(String(formData.age)),
       muac: formData.muac === '' ? 0 : parseFloat(String(formData.muac)),
-      gender: formData.gender as Gender, // Ensure correct type
+      gender: formData.gender as Gender,
+      fatherOrHusband: formData.father,
+      villageName: formData.village,
     };
 
     const duplicate = checkDuplicate(parsedFormData);
@@ -215,7 +208,6 @@ const ChildScreening = () => {
       return;
     }
 
-    // Get the next serial number
     const nextSerialNo = childScreening.length + 1;
     
     const submissionData = {
@@ -234,56 +226,18 @@ const ChildScreening = () => {
     setDuplicateEntry({ exists: false });
   };
 
-  const handleBulkSubmit = async () => {
-    if (bulkEntries.length === 0) {
-      toast({
-        title: "No Entries",
-        description: "Please add entries to the bulk submit list.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate each entry for duplicates before submission
-    for (const entry of bulkEntries) {
-      const duplicate = checkDuplicate(entry);
-      if (duplicate.exists) {
-        toast({
-          title: "Duplicate Entry Found",
-          description: `Entry for ${entry.name} already exists. Please review.`,
-          variant: "destructive",
-        });
-        return; // Stop submission if any duplicate is found
-      }
-    }
-
-    // If all entries are unique, proceed with submission
-    await bulkAddChildScreening(bulkEntries);
-    setBulkEntries([]);
-    setFormData({
-      ...initialFormState,
-      district: formData.district,
-      unionCouncil: formData.unionCouncil,
-      village: formData.village,
-    });
-    setIsBulkEntry(false);
-    toast({
-      title: "Bulk Entries Saved",
-      description: "All child screening entries have been saved.",
-    });
-  };
-
   const handleForceSubmit = async () => {
-    // Get the next serial number
     const nextSerialNo = childScreening.length + 1;
     
     const submissionData = {
       ...formData,
       age: formData.age === '' ? 0 : parseFloat(String(formData.age)),
       muac: formData.muac === '' ? 0 : parseFloat(String(formData.muac)),
-      gender: formData.gender as Gender, // Ensure correct type
+      gender: formData.gender as Gender,
       serialNo: nextSerialNo,
-      date: new Date()
+      date: new Date(),
+      fatherOrHusband: formData.father,
+      villageName: formData.village,
     };
 
     await addChildScreening(submissionData);
@@ -339,7 +293,6 @@ const ChildScreening = () => {
           </div>
         </div>
 
-        {/* Online/Offline Status Banner */}
         <div className={`mb-2 p-2 rounded-lg border ${isOnline ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800'}`}>
           <div className="flex items-center gap-2">
             {isOnline ? (

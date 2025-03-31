@@ -37,7 +37,7 @@ export interface AwarenessSessionData extends BaseEntry {
   ucName: string;
   underFiveChildren: number;
   contactNumber: string;
-  sameUc: boolean; // Added sameUc field
+  sameUc: string; // Changed from boolean to string to match actual usage
   alternateLocation?: string; // Added alternateLocation field
   locationCoords?: {  // Added location coordinates
     latitude: number;
@@ -103,4 +103,3 @@ export interface EditableRecord {
 
 // Input field type for form validation
 export type InputFieldType = "text" | "number" | "images";
-
