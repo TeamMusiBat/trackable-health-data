@@ -30,23 +30,25 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
   const typeLabel = sessionsType === 'fmt' ? 'FMT' : 'Social Mobilizers';
   const today = new Date();
   
-  // State for form inputs
+  // State for common session info
   const [sessionNumber, setSessionNumber] = useState(1);
+  const [villageName, setVillageName] = useState("");
+  const [ucName, setUcName] = useState("");
+  const [locationCoords, setLocationCoords] = useState<{latitude: number, longitude: number, accuracy?: number} | null>(null);
+  const [locationStatus, setLocationStatus] = useState<string>("");
+  
+  // State for individual person form
   const [name, setName] = useState("");
   const [fatherOrHusband, setFatherOrHusband] = useState("");
   const [age, setAge] = useState("");
-  const [villageName, setVillageName] = useState("");
-  const [ucName, setUcName] = useState("");
   const [underFiveChildren, setUnderFiveChildren] = useState("");
   const [contactNumber, setContactNumber] = useState("");
   const [sameUc, setSameUc] = useState(true);
   const [alternateLocation, setAlternateLocation] = useState("");
-  const [locationCoords, setLocationCoords] = useState<{latitude: number, longitude: number, accuracy?: number} | null>(null);
   const [images, setImages] = useState<string[]>([]);
   
   // State for bulk entry
   const [bulkEntries, setBulkEntries] = useState<Omit<AwarenessSessionData, "id" | "userId" | "synced">[]>([]);
-  const [activeTab, setActiveTab] = useState("single");
   const [sessionsList, setSessionsList] = useState<AwarenessSessionData[]>([]);
   
   // Load existing sessions on component mount
@@ -92,10 +94,7 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
   // Capture GPS location
   const captureLocation = () => {
     if (navigator.geolocation) {
-      toast({
-        title: "Getting GPS location",
-        description: "Please wait...",
-      });
+      setLocationStatus("Getting GPS location, please wait...");
       
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -105,29 +104,34 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
             accuracy: position.coords.accuracy
           });
           
+          setLocationStatus(`Location captured successfully!`);
+          
           toast({
             title: "Location captured",
-            description: `Lat: ${position.coords.latitude.toFixed(6)}, Long: ${position.coords.longitude.toFixed(6)}`,
+            description: `Coordinates captured successfully`,
           });
         },
         (error) => {
           console.error("Geolocation error:", error);
+          setLocationStatus(`Error: ${error.message || "Failed to get location"}`);
+          
           toast({
             title: "Error getting location",
-            description: error.message || "Location service failed",
+            description: error.message || "Location service failed. Please try again.",
             variant: "destructive"
           });
         },
         { 
           enableHighAccuracy: true,
-          timeout: 30000, // Increased timeout to 30 seconds
-          maximumAge: 0 
+          timeout: 60000, // Increased timeout to 60 seconds
+          maximumAge: 0 // Don't use cached position
         }
       );
     } else {
+      setLocationStatus("Geolocation not available on this device");
       toast({
         title: "Geolocation not available",
-        description: "Your browser does not support geolocation",
+        description: "Your browser or device does not support geolocation",
         variant: "destructive"
       });
     }
@@ -138,24 +142,21 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
     setName("");
     setFatherOrHusband("");
     setAge("");
-    setVillageName("");
-    setUcName("");
     setUnderFiveChildren("");
     setContactNumber("");
     setSameUc(true);
     setAlternateLocation("");
     setImages([]);
-    setLocationCoords(null);
   };
 
   // Handle form submission for single entry
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name || !fatherOrHusband || !age || !villageName) {
+    if (!name || !fatherOrHusband) {
       toast({
         title: "Missing information",
-        description: "Please fill all required fields",
+        description: "Please fill Name and Father/Husband Name fields",
         variant: "destructive"
       });
       return;
@@ -170,7 +171,7 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
       sessionNumber: Number(sessionNumber),
       name: formattedName,
       fatherOrHusband: formattedFatherName,
-      age: Number(age),
+      age: Number(age) || 0,
       villageName: formattedVillageName,
       ucName,
       underFiveChildren: Number(underFiveChildren) || 0,
@@ -186,21 +187,19 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
     addAwarenessSession(newSession);
     
     toast({
-      title: "Session recorded",
-      description: `${typeLabel} awareness session for ${formattedName} has been saved`,
+      title: "Participant recorded",
+      description: `${formattedName} has been added to awareness session #${sessionNumber}`,
     });
     
     resetForm();
-    // Increment session number for the next entry of the same day
-    setSessionNumber(prev => prev + 1);
   };
 
   // Add entry to bulk list
   const addToBulkEntries = () => {
-    if (!name || !fatherOrHusband || !age || !villageName) {
+    if (!name || !fatherOrHusband) {
       toast({
         title: "Missing information",
-        description: "Please fill all required fields",
+        description: "Please fill Name and Father/Husband Name fields",
         variant: "destructive"
       });
       return;
@@ -215,7 +214,7 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
       sessionNumber: Number(sessionNumber),
       name: formattedName,
       fatherOrHusband: formattedFatherName,
-      age: Number(age),
+      age: Number(age) || 0,
       villageName: formattedVillageName,
       ucName,
       underFiveChildren: Number(underFiveChildren) || 0,
@@ -286,235 +285,246 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
       
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="mb-4">
-          <h1 className="text-2xl font-bold">{typeLabel} Awareness Sessions</h1>
+          <h1 className="text-2xl font-bold">Awareness Sessions</h1>
           <div className="text-muted-foreground flex items-center mt-1">
             <Calendar className="h-4 w-4 mr-1" />
             <span>{format(today, 'PPP')}</span>
           </div>
         </div>
-        
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="single">Single Entry</TabsTrigger>
-            <TabsTrigger value="bulk">Bulk Entry ({bulkEntries.length})</TabsTrigger>
-          </TabsList>
+
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Session #{sessionNumber} Information</CardTitle>
+            <CardDescription>
+              Common information for all participants in this session - {format(today, 'PPP')}
+            </CardDescription>
+          </CardHeader>
           
-          <TabsContent value="single" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>New {typeLabel} Awareness Session #{sessionNumber}</CardTitle>
-                <CardDescription>
-                  Record participants for {typeLabel.toLowerCase()} awareness sessions - {format(today, 'PPP')}
-                </CardDescription>
-              </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="sessionNumber">Session Number</Label>
+                <Input
+                  id="sessionNumber"
+                  type="number"
+                  value={sessionNumber}
+                  onChange={(e) => setSessionNumber(Number(e.target.value))}
+                />
+              </div>
               
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="sessionNumber">Session Number</Label>
-                      <Input
-                        id="sessionNumber"
-                        type="number"
-                        value={sessionNumber}
-                        onChange={(e) => setSessionNumber(Number(e.target.value))}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Name *</Label>
-                      <Input
-                        id="name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="fatherOrHusband">Father/Husband Name *</Label>
-                      <Input
-                        id="fatherOrHusband"
-                        value={fatherOrHusband}
-                        onChange={(e) => setFatherOrHusband(e.target.value)}
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="age">Age *</Label>
-                      <Input
-                        id="age"
-                        type="number"
-                        value={age}
-                        onChange={(e) => setAge(e.target.value)}
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="villageName">Village Name *</Label>
-                        {locationCoords && (
-                          <GoogleMapLink 
-                            latitude={locationCoords.latitude} 
-                            longitude={locationCoords.longitude} 
-                            name={villageName || "Location"} 
-                          />
-                        )}
-                      </div>
-                      <div className="flex space-x-2">
-                        <Input
-                          id="villageName"
-                          value={villageName}
-                          onChange={(e) => setVillageName(e.target.value)}
-                          className="flex-1"
-                          required
-                        />
-                        <Button 
-                          type="button" 
-                          variant="outline"
-                          onClick={captureLocation}
-                          className="whitespace-nowrap"
-                        >
-                          <MapPin className="h-4 w-4 mr-2" />
-                          Map Location
-                        </Button>
-                      </div>
-                      {locationCoords && (
-                        <span className="text-xs text-muted-foreground">
-                          Coordinates: {locationCoords.latitude.toFixed(6)}, {locationCoords.longitude.toFixed(6)}
-                          {locationCoords.accuracy && ` (±${locationCoords.accuracy.toFixed(1)}m)`}
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="ucName">UC Name</Label>
-                      <Input
-                        id="ucName"
-                        value={ucName}
-                        onChange={(e) => setUcName(e.target.value)}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="underFiveChildren">Under Five Children</Label>
-                      <Input
-                        id="underFiveChildren"
-                        type="number"
-                        value={underFiveChildren}
-                        onChange={(e) => setUnderFiveChildren(e.target.value)}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="contactNumber">Contact Number (Optional)</Label>
-                      <Input
-                        id="contactNumber"
-                        value={contactNumber}
-                        onChange={(e) => setContactNumber(e.target.value)}
-                        placeholder="Optional"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Checkbox 
-                          id="sameUc"
-                          checked={sameUc}
-                          onCheckedChange={(checked) => setSameUc(!!checked)}
-                        />
-                        <Label htmlFor="sameUc" className="cursor-pointer">Person belongs to same UC</Label>
-                      </div>
-                      
-                      {!sameUc && (
-                        <Input
-                          id="alternateLocation"
-                          value={alternateLocation}
-                          onChange={(e) => setAlternateLocation(e.target.value)}
-                          placeholder="Alternate Location"
-                        />
-                      )}
-                    </div>
-                  </div>
-                  
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="villageName">Village Name *</Label>
+                  {locationCoords && (
+                    <GoogleMapLink 
+                      latitude={locationCoords.latitude} 
+                      longitude={locationCoords.longitude} 
+                      name={villageName || "Location"} 
+                    />
+                  )}
+                </div>
+                <div className="flex space-x-2">
+                  <Input
+                    id="villageName"
+                    value={villageName}
+                    onChange={(e) => setVillageName(e.target.value)}
+                    className="flex-1"
+                    required
+                  />
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    onClick={captureLocation}
+                    className="whitespace-nowrap"
+                  >
+                    <MapPin className="h-4 w-4 mr-2" />
+                    Map Location
+                  </Button>
+                </div>
+                {locationStatus && (
+                  <span className="text-xs text-muted-foreground">
+                    Status: {locationStatus}
+                  </span>
+                )}
+                {locationCoords && (
+                  <span className="text-xs text-muted-foreground">
+                    Coordinates: {locationCoords.latitude.toFixed(6)}, {locationCoords.longitude.toFixed(6)}
+                    {locationCoords.accuracy && ` (±${locationCoords.accuracy.toFixed(1)}m)`}
+                  </span>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="ucName">UC Name</Label>
+                <Input
+                  id="ucName"
+                  value={ucName}
+                  onChange={(e) => setUcName(e.target.value)}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Add Participant</CardTitle>
+              <CardDescription>
+                Record participant details for Session #{sessionNumber}
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Images</Label>
-                    <ImageCapture
-                      initialImages={images}
-                      onImagesChange={setImages}
-                      maxImages={100} // Allow many images
+                    <Label htmlFor="name">Name *</Label>
+                    <Input
+                      id="name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
                     />
                   </div>
                   
-                  <div className="flex justify-between pt-4">
-                    <Button 
-                      type="button" 
-                      variant="outline"
-                      onClick={addToBulkEntries}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add to Bulk
-                    </Button>
-                    <Button type="submit">
-                      <Save className="h-4 w-4 mr-2" />
-                      Save Participant
-                    </Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="fatherOrHusband">Father/Husband Name *</Label>
+                    <Input
+                      id="fatherOrHusband"
+                      value={fatherOrHusband}
+                      onChange={(e) => setFatherOrHusband(e.target.value)}
+                      required
+                    />
                   </div>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="bulk" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Bulk Entry List - Session #{sessionNumber}</CardTitle>
-                <CardDescription>
-                  Submit multiple participants for Session #{sessionNumber} at once
-                </CardDescription>
-              </CardHeader>
-              
-              <CardContent>
-                {bulkEntries.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    No entries added yet. Add participants from the Single Entry tab.
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="age">Age</Label>
+                    <Input
+                      id="age"
+                      type="number"
+                      min="0"
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                    />
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    {bulkEntries.map((entry, index) => (
-                      <Card key={index}>
-                        <CardContent className="p-4 flex justify-between items-center">
-                          <div>
-                            <p className="font-medium">{entry.name}</p>
-                            <p className="text-sm text-gray-500">
-                              {entry.fatherOrHusband} | {entry.age} years | {entry.villageName}
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeBulkEntry(index)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    ))}
-                    
-                    <div className="flex justify-end pt-4">
-                      <Button onClick={handleBulkSubmit}>
-                        <Save className="h-4 w-4 mr-2" />
-                        Submit All ({bulkEntries.length})
-                      </Button>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="underFiveChildren">Under Five Year Children</Label>
+                    <Input
+                      id="underFiveChildren"
+                      type="number"
+                      min="0"
+                      value={underFiveChildren}
+                      onChange={(e) => setUnderFiveChildren(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="contactNumber">Contact Information</Label>
+                    <Input
+                      id="contactNumber"
+                      value={contactNumber}
+                      onChange={(e) => setContactNumber(e.target.value)}
+                      placeholder="Email/Contact (Optional)"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Checkbox 
+                        id="sameUc"
+                        checked={sameUc}
+                        onCheckedChange={(checked) => setSameUc(!!checked)}
+                        defaultChecked
+                      />
+                      <Label htmlFor="sameUc" className="cursor-pointer">Person belongs to same UC</Label>
                     </div>
+                    
+                    {!sameUc && (
+                      <Input
+                        id="alternateLocation"
+                        value={alternateLocation}
+                        onChange={(e) => setAlternateLocation(e.target.value)}
+                        placeholder="Alternate Location"
+                      />
+                    )}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Images</Label>
+                  <ImageCapture
+                    initialImages={images}
+                    onImagesChange={setImages}
+                    maxImages={1000} // Allow unlimited images
+                  />
+                </div>
+                
+                <div className="flex justify-between pt-4">
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    onClick={addToBulkEntries}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add to Bulk
+                  </Button>
+                  <Button type="submit">
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Participant
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Bulk Entry List - Session #{sessionNumber}</CardTitle>
+              <CardDescription>
+                Submit multiple participants for Session #{sessionNumber} at once
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent>
+              {bulkEntries.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No entries added yet. Add participants from the form on the left.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {bulkEntries.map((entry, index) => (
+                    <Card key={index}>
+                      <CardContent className="p-4 flex justify-between items-center">
+                        <div>
+                          <p className="font-medium">{entry.name}</p>
+                          <p className="text-sm text-gray-500">
+                            {entry.fatherOrHusband} | {entry.age} years
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeBulkEntry(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  
+                  <div className="flex justify-end pt-4">
+                    <Button onClick={handleBulkSubmit}>
+                      <Save className="h-4 w-4 mr-2" />
+                      Submit All ({bulkEntries.length})
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
         
         {sessionsList.length > 0 && (
           <div className="mt-8">
@@ -569,8 +579,8 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
                         { name: "name", label: "Name", type: "text" },
                         { name: "fatherOrHusband", label: "Father/Husband Name", type: "text" },
                         { name: "age", label: "Age", type: "number" },
-                        { name: "underFiveChildren", label: "Under Five Children", type: "number" },
-                        { name: "contactNumber", label: "Contact Number", type: "text" },
+                        { name: "underFiveChildren", label: "Under Five Year Children", type: "number" },
+                        { name: "contactNumber", label: "Contact Information", type: "text" },
                         { name: "villageName", label: "Village", type: "text" },
                         { name: "ucName", label: "UC Name", type: "text" },
                         { name: "sameUc", label: "Person belongs to same UC", type: "text" },

@@ -10,7 +10,9 @@ interface GoogleMapLinkProps {
 }
 
 export const GoogleMapLink: React.FC<GoogleMapLinkProps> = ({ latitude, longitude, name }) => {
-  const handleOpenGoogleMaps = () => {
+  const handleOpenGoogleMaps = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     const mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
     window.open(mapsUrl, '_blank');
   };
@@ -23,7 +25,7 @@ export const GoogleMapLink: React.FC<GoogleMapLinkProps> = ({ latitude, longitud
       className="flex items-center gap-1 text-xs"
     >
       <MapPin className="h-3 w-3" />
-      <span className="mr-1">View on Google Maps</span>
+      <span className="mr-1">View on Maps</span>
       <ExternalLink className="h-3 w-3" />
     </Button>
   );

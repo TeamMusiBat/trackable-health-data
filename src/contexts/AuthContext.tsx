@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
@@ -114,7 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('track4health_user', JSON.stringify(userWithStatus));
       toast({
         title: "Login successful",
-        description: `Welcome back, ${username}!`,
+        description: `Welcome back!`,
       });
       return true;
     }
