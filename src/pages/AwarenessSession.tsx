@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
@@ -42,7 +41,7 @@ interface SessionFormData {
   age: number | string;
   underFiveChildren: number | string;
   contactNumber: string;
-  sameUc: boolean;
+  sameUc: string;
   alternateLocation: string;
   locationCoords?: {
     latitude: number;
@@ -61,7 +60,7 @@ const initialFormState: SessionFormData = {
   age: "",
   underFiveChildren: "",
   contactNumber: "",
-  sameUc: true,
+  sameUc: "",
   alternateLocation: "",
   images: [],
 };
@@ -176,7 +175,7 @@ const AwarenessSession = () => {
   const handleCheckboxChange = (checked: boolean) => {
     setFormData(prev => ({
       ...prev,
-      sameUc: checked,
+      sameUc: checked ? "Yes" : "No",
       alternateLocation: checked ? "" : prev.alternateLocation
     }));
   };
@@ -573,7 +572,7 @@ const AwarenessSession = () => {
                       <div className="space-y-2">
                         <div className="flex items-center space-x-2 mb-2">
                           <Checkbox id="sameUc" checked={formData.sameUc} onCheckedChange={handleCheckboxChange} />
-                          <Label htmlFor="sameUc">Person Belongs to Same UC</Label>
+                          <Label htmlFor="sameUc">Person belongs to same UC</Label>
                         </div>
                         {!formData.sameUc && (
                           <Input
@@ -749,7 +748,7 @@ const AwarenessSession = () => {
                                       { name: "contactNumber", label: "Contact Number", type: "text" },
                                       { name: "villageName", label: "Village", type: "text" },
                                       { name: "ucName", label: "UC Name", type: "text" },
-                                      { name: "sameUc", label: "Same UC", type: "boolean" },
+                                      { name: "sameUc", label: "Person belongs to same UC", type: "text", required: true },
                                       { name: "alternateLocation", label: "Alternate Location", type: "text" },
                                       { name: "images", label: "Images", type: "images" }
                                     ]}

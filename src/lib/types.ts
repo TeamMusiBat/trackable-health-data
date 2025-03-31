@@ -12,12 +12,14 @@ export interface ChildScreeningData extends BaseEntry {
   serialNo: number;
   name: string;
   father: string;
+  fatherOrHusband: string; // Added to match usage in Dashboard.tsx
   age: number;
   gender: string;
   muac: number;
   district: string;
   unionCouncil: string;
   village: string;
+  villageName: string; // Added to match usage in Dashboard.tsx
   vaccination: string;
   dueVaccine: boolean;
   remarks: string;
@@ -98,3 +100,7 @@ export interface EditableRecord {
   isEditing: boolean;
   originalData: any;
 }
+
+// Input field type for form validation
+export type InputFieldType = "text" | "number" | "images";
+

@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
 import { Button } from "@/components/ui/button";
@@ -105,10 +104,9 @@ const Dashboard = () => {
     return <Navigate to="/login" />;
   }
 
-  // Get recent screenings sorted by date (newest first)
   const recentScreenings = [...childScreening]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 5);  // Show only the 5 most recent
+    .slice(0, 5);
 
   const getMuacStatus = (muac: number) => {
     if (muac <= 11) return { status: "SAM", color: "text-nutrition-sam" };
@@ -252,8 +250,8 @@ const Dashboard = () => {
                         return (
                           <TableRow key={child.id} className={rowColor}>
                             <TableCell className="font-medium">{child.name}</TableCell>
-                            <TableCell>{child.fatherOrHusband}</TableCell>
-                            <TableCell>{child.villageName}</TableCell>
+                            <TableCell>{child.father}</TableCell>
+                            <TableCell>{child.village}</TableCell>
                             <TableCell>{child.age} {typeof child.age === 'number' && 'years'}</TableCell>
                             <TableCell>{child.muac} cm</TableCell>
                             <TableCell className={status.color + " font-medium"}>
