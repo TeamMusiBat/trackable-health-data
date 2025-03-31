@@ -192,9 +192,6 @@ export function Header() {
               </Button>
               
               <div className="flex items-center gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback>{currentUser?.name ? currentUser.name[0].toUpperCase() : ""}</AvatarFallback>
-                </Avatar>
                 {(currentUser?.role === 'developer' || currentUser?.role === 'master') && (
                   <Button
                     variant="ghost"
