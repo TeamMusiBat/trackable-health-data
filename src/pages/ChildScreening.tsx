@@ -258,6 +258,26 @@ const ChildScreening = () => {
     updateChildScreening(id, updatedData);
   };
 
+  const submitBulk = () => {
+    if (bulkEntries.length === 0) {
+      toast({
+        title: "No entries",
+        description: "Please add at least one entry to the bulk list",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    bulkAddChildScreening(bulkEntries);
+    
+    toast({
+      title: "Bulk submission successful",
+      description: `${bulkEntries.length} entries have been saved`,
+    });
+    
+    setBulkEntries([]);
+  };
+
   const canEdit = currentUser?.role === 'developer' || currentUser?.role === 'master';
 
   if (!isAuthenticated) {
@@ -513,7 +533,7 @@ const ChildScreening = () => {
               <CardTitle>Bulk Entry</CardTitle>
               <CardDescription>Add multiple child entries at once</CardDescription>
             </div>
-            <Button type="button" onClick={handleBulkSubmit} disabled={bulkEntries.length === 0}>
+            <Button type="button" onClick={submitBulk} disabled={bulkEntries.length === 0}>
               Save All
             </Button>
           </CardHeader>

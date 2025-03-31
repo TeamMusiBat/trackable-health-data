@@ -12,8 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Check, Plus, Save, X } from 'lucide-react';
 import { EditableEntry } from '@/components/EditableEntry';
 import { toast } from '@/hooks/use-toast';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
 import { nanoid } from 'nanoid';
 import { ImageCapture } from '@/components/ImageCapture';
 
@@ -21,7 +21,7 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser } = useAuth();
-  const { addAwarenessSession, updateAwarenessSession, awarnessSessions } = useData();
+  const { addAwarenessSession, updateAwarenessSession, awarenessSessionsFMT, awarenessSessionsSM } = useData();
 
   // Detect type from URL query parameter if not provided as prop
   const sessionsType = type || new URLSearchParams(location.search).get('type') || 'fmt';
@@ -49,14 +49,14 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
   
   // Load existing sessions on component mount
   useEffect(() => {
-    if (awarnessSessions) {
-      setSessionsList(
-        awarnessSessions.filter(session => 
-          session.type === (sessionsType === 'fmt' ? 'FMT' : 'Social Mobilizers')
-        )
-      );
-    }
-  }, [awarnessSessions, sessionsType]);
+    // Combine both types of sessions and filter by the current type
+    const allSessions = [...awarenessSessionsFMT, ...awarenessSessionsSM];
+    setSessionsList(
+      allSessions.filter(session => 
+        session.type === (sessionsType === 'fmt' ? 'FMT' : 'Social Mobilizers')
+      )
+    );
+  }, [awarenessSessionsFMT, awarenessSessionsSM, sessionsType]);
 
   // Update serial number when sessions list changes
   useEffect(() => {
@@ -147,7 +147,7 @@ const AwarenessSession: React.FC<AwarenessSessionProps> = ({ type }) => {
       ucName,
       underFiveChildren: Number(underFiveChildren) || 0,
       contactNumber,
-      sameUc: sameUc,
+      sameUc,
       alternateLocation,
       locationCoords: locationCoords || undefined,
       date: new Date(),
