@@ -5,6 +5,7 @@ export interface BaseEntry {
   userId: string;
   synced: boolean;
   date: Date;
+  conductor?: string; // Added conductor field
 }
 
 // Child screening data

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
 import { Header } from "@/components/Header";
@@ -29,7 +29,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Navigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { ChildScreeningData, DuplicateEntry } from "@/lib/types";
-import { FileSpreadsheet, Plus, AlertTriangle, MapPin, Building, Wifi, WifiOff, Camera, Image as ImageIcon } from "lucide-react";
+import { FileSpreadsheet, Plus, AlertTriangle, MapPin, Building, Wifi, WifiOff, Camera, Image as ImageIcon, User } from "lucide-react";
 
 type Gender = "Male" | "Female" | "Other";
 
@@ -54,6 +54,9 @@ const ChildScreening = () => {
   const [bulkEntries, setBulkEntries] = useState<Array<Omit<ChildScreeningData, 'id' | 'userId' | 'synced'>>>([]);
   const [isBulkEntry, setIsBulkEntry] = useState(false);
   const [duplicateEntry, setDuplicateEntry] = useState<DuplicateEntry>({ exists: false });
+  const [locationCoords, setLocationCoords] = useState<{latitude: number, longitude: number, accuracy?: number} | null>(null);
+  const [locationStatus, setLocationStatus] = useState<string>("");
+  const [screeningConductor, setScreeningConductor] = useState<string>("");
 
   const storedLocation = localStorage.getItem('screeningLocation');
   let parsedLocation = { district: "", unionCouncil: "", village: "" };
@@ -89,6 +92,14 @@ const ChildScreening = () => {
   const todaysScreenings = childScreening.filter(
     item => new Date(item.date).toDateString() === today
   );
+
+  useEffect(() => {
+    if (currentUser?.name) {
+      setScreeningConductor(currentUser.name);
+    }
+    
+    captureLocation();
+  }, [currentUser]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
@@ -133,6 +144,51 @@ const ChildScreening = () => {
     }));
   };
 
+  const captureLocation = () => {
+    if (navigator.geolocation) {
+      setLocationStatus("Getting GPS location, please wait...");
+      
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocationCoords({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy
+          });
+          
+          setLocationStatus(`Location captured successfully!`);
+          
+          toast({
+            title: "Location captured",
+            description: `Coordinates captured successfully`,
+          });
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          setLocationStatus(`Error: ${error.message || "Failed to get location"}`);
+          
+          toast({
+            title: "Error getting location",
+            description: error.message || "Location service failed. Please try again.",
+            variant: "destructive"
+          });
+        },
+        { 
+          enableHighAccuracy: true,
+          timeout: 60000,
+          maximumAge: 0
+        }
+      );
+    } else {
+      setLocationStatus("Geolocation not available on this device");
+      toast({
+        title: "Geolocation not available",
+        description: "Your browser or device does not support geolocation",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleAddToBulk = () => {
     if (!formData.name || !formData.father || !formData.village) {
       toast({
@@ -150,6 +206,8 @@ const ChildScreening = () => {
       gender: formData.gender as Gender,
       fatherOrHusband: formData.father,
       villageName: formData.village,
+      conductor: screeningConductor,
+      location: locationCoords || undefined
     };
 
     const duplicate = checkDuplicate(parsedFormData);
@@ -200,6 +258,8 @@ const ChildScreening = () => {
       gender: formData.gender as Gender,
       fatherOrHusband: formData.father,
       villageName: formData.village,
+      conductor: screeningConductor,
+      location: locationCoords || undefined
     };
 
     const duplicate = checkDuplicate(parsedFormData);
@@ -238,6 +298,8 @@ const ChildScreening = () => {
       date: new Date(),
       fatherOrHusband: formData.father,
       villageName: formData.village,
+      conductor: screeningConductor,
+      location: locationCoords || undefined
     };
 
     await addChildScreening(submissionData);
@@ -326,20 +388,97 @@ const ChildScreening = () => {
           </div>
         </div>
 
-        <div className={`mb-6 p-4 rounded-lg border ${locationSet ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800'}`}>
-          <div className="flex items-center gap-2">
-            <MapPin className={locationSet ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"} />
-            <div className="font-medium text-lg">
-              Current Location: {locationSet ? `${formData.village}, ${formData.unionCouncil}, ${formData.district}` : 'Please set location'}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Session Information</CardTitle>
+            <CardDescription>Common information for all entries in this screening session</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="conductor">Screening Conducted By</Label>
+                <div className="flex items-center space-x-2 p-3 border rounded-md bg-muted">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span>{screeningConductor || (currentUser?.name || "Unknown")}</span>
+                </div>
+              </div>
+              
+              <div className="space-y-2 md:col-span-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="location">Location Status</Label>
+                  {locationCoords && (
+                    <Button 
+                      type="button" 
+                      variant="ghost"
+                      size="sm"
+                      onClick={captureLocation}
+                      className="h-8"
+                    >
+                      <MapPin className="h-4 w-4 mr-1" />
+                      Refresh
+                    </Button>
+                  )}
+                </div>
+                
+                <div className={`p-3 border rounded-md ${locationCoords ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800'}`}>
+                  <div className="flex items-center gap-2">
+                    <MapPin className={locationCoords ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"} />
+                    <div className="text-sm">
+                      {locationStatus || (locationCoords ? "Location captured successfully" : "Capturing location...")}
+                      {locationCoords && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Coordinates: {locationCoords.latitude.toFixed(6)}, {locationCoords.longitude.toFixed(6)}
+                          {locationCoords.accuracy && ` (±${locationCoords.accuracy.toFixed(1)}m)`}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          {locationSet && (
-            <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-              <Building className="h-4 w-4" />
-              <span>All new entries will be recorded at this location</span>
+            
+            <div className="bg-muted p-4 rounded-md mt-4">
+              <h3 className="font-medium mb-2 flex items-center gap-1">
+                <Building className="h-4 w-4" /> 
+                Screening Location
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="district">District *</Label>
+                  <Input
+                    id="district"
+                    name="district"
+                    value={formData.district}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="unionCouncil">Union Council *</Label>
+                  <Input
+                    id="unionCouncil"
+                    name="unionCouncil"
+                    value={formData.unionCouncil}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="village">Village *</Label>
+                  <Input
+                    id="village"
+                    name="village"
+                    value={formData.village}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+              </div>
             </div>
-          )}
-        </div>
+          </CardContent>
+        </Card>
 
         {duplicateEntry.exists && (
           <div className="mb-4 p-4 rounded-md border border-red-500 bg-red-50">
@@ -361,224 +500,186 @@ const ChildScreening = () => {
           </div>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Child Information</CardTitle>
-            <CardDescription>Enter the details of the child for screening</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="bg-muted p-4 rounded-md mb-4">
-                <h3 className="font-medium mb-2 flex items-center gap-1">
-                  <MapPin className="h-4 w-4" /> 
-                  Screening Location
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Child Information</CardTitle>
+              <CardDescription>Enter the details of the child for screening</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="district">District *</Label>
+                    <Label htmlFor="name">Name *</Label>
                     <Input
-                      id="district"
-                      name="district"
-                      value={formData.district}
+                      id="name"
+                      name="name"
+                      value={formData.name}
                       onChange={handleInputChange}
                       required
                     />
                   </div>
-                  
                   <div className="space-y-2">
-                    <Label htmlFor="unionCouncil">Union Council *</Label>
+                    <Label htmlFor="father">Father's Name *</Label>
                     <Input
-                      id="unionCouncil"
-                      name="unionCouncil"
-                      value={formData.unionCouncil}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="village">Village *</Label>
-                    <Input
-                      id="village"
-                      name="village"
-                      value={formData.village}
+                      id="father"
+                      name="father"
+                      value={formData.father}
                       onChange={handleInputChange}
                       required
                     />
                   </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name *</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="age">Age (Months) *</Label>
+                    <Input
+                      id="age"
+                      name="age"
+                      type="number"
+                      min="6"
+                      max="59"
+                      value={formData.age}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="muac">MUAC (cm) *</Label>
+                    <Input
+                      id="muac"
+                      name="muac"
+                      type="number"
+                      step="0.1"
+                      value={formData.muac}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="father">Father's Name *</Label>
-                  <Input
-                    id="father"
-                    name="father"
-                    value={formData.father}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="age">Age (Months) *</Label>
-                  <Input
-                    id="age"
-                    name="age"
-                    type="number"
-                    min="6"
-                    max="59"
-                    value={formData.age}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <Label>Gender</Label>
+                  <Select 
+                    value={formData.gender} 
+                    onValueChange={(value: Gender) => setFormData({ ...formData, gender: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="muac">MUAC (cm) *</Label>
-                  <Input
-                    id="muac"
-                    name="muac"
-                    type="number"
-                    step="0.1"
-                    value={formData.muac}
+                  <Label>Vaccination</Label>
+                  <Select value={formData.vaccination} onValueChange={(value) => setFormData({ ...formData, vaccination: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select vaccination status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0 - Dose">0 - Dose</SelectItem>
+                      <SelectItem value="1st - Dose">1st - Dose</SelectItem>
+                      <SelectItem value="2nd - Dose">2nd - Dose</SelectItem>
+                      <SelectItem value="3rd - Dose">3rd - Dose</SelectItem>
+                      <SelectItem value="MR - 1">MR - 1</SelectItem>
+                      <SelectItem value="MR - 2">MR - 2</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="dueVaccine"
+                    name="dueVaccine"
+                    checked={formData.dueVaccine}
+                    onCheckedChange={(checked) => setFormData({ ...formData, dueVaccine: !!checked })}
+                  />
+                  <Label htmlFor="dueVaccine">Due Vaccine</Label>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="remarks">Remarks</Label>
+                  <Textarea
+                    id="remarks"
+                    name="remarks"
+                    value={formData.remarks}
                     onChange={handleInputChange}
-                    required
+                    placeholder="Any additional remarks"
                   />
                 </div>
+                
+                <div className="space-y-2">
+                  <Label>Screening Images</Label>
+                  <ImageCapture onImagesChange={handleImagesChange} />
+                </div>
+                
+                <div className="flex gap-2 pt-4">
+                  <Button type="button" onClick={handleAddToBulk} className="flex-1">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add to Bulk
+                  </Button>
+                  <Button type="submit" className="flex-1">
+                    Save
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Bulk Entry</CardTitle>
+                <CardDescription>Add multiple child entries at once</CardDescription>
               </div>
-              <div className="space-y-2">
-                <Label>Gender</Label>
-                <Select 
-                  value={formData.gender} 
-                  onValueChange={(value: Gender) => setFormData({ ...formData, gender: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Vaccination</Label>
-                <Select value={formData.vaccination} onValueChange={(value) => setFormData({ ...formData, vaccination: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select vaccination status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0 - Dose">0 - Dose</SelectItem>
-                    <SelectItem value="1st - Dose">1st - Dose</SelectItem>
-                    <SelectItem value="2nd - Dose">2nd - Dose</SelectItem>
-                    <SelectItem value="3rd - Dose">3rd - Dose</SelectItem>
-                    <SelectItem value="MR - 1">MR - 1</SelectItem>
-                    <SelectItem value="MR - 2">MR - 2</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="dueVaccine"
-                  name="dueVaccine"
-                  checked={formData.dueVaccine}
-                  onCheckedChange={(checked) => setFormData({ ...formData, dueVaccine: !!checked })}
-                />
-                <Label htmlFor="dueVaccine">Due Vaccine</Label>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="remarks">Remarks</Label>
-                <Textarea
-                  id="remarks"
-                  name="remarks"
-                  value={formData.remarks}
-                  onChange={handleInputChange}
-                  placeholder="Any additional remarks"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Screening Images</Label>
-                <ImageCapture onImagesChange={handleImagesChange} />
-              </div>
-              
-              <div className="flex gap-2 pt-4">
-                <Button type="button" onClick={handleAddToBulk} className="flex-1">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add to Bulk
-                </Button>
-                <Button type="submit" className="flex-1">
-                  Save
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card className="mt-6">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Bulk Entry</CardTitle>
-              <CardDescription>Add multiple child entries at once</CardDescription>
-            </div>
-            <Button type="button" onClick={submitBulk} disabled={bulkEntries.length === 0}>
-              Save All
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {bulkEntries.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8">
-                <p className="text-sm text-muted-foreground">No entries added yet. Use the form above to add entries to the bulk.</p>
-              </div>
-            ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Father's Name</TableHead>
-                      <TableHead>Age</TableHead>
-                      <TableHead>MUAC (cm)</TableHead>
-                      <TableHead>Images</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {bulkEntries.map((entry, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{entry.name}</TableCell>
-                        <TableCell>{entry.father}</TableCell>
-                        <TableCell>{entry.age}</TableCell>
-                        <TableCell>{entry.muac}</TableCell>
-                        <TableCell>
-                          {entry.images && entry.images.length > 0 ? (
-                            <div className="flex items-center gap-1">
-                              <ImageIcon className="h-4 w-4" />
-                              <span>{entry.images.length}</span>
-                            </div>
-                          ) : (
-                            "-"
-                          )}
-                        </TableCell>
+              <Button type="button" onClick={submitBulk} disabled={bulkEntries.length === 0}>
+                Save All
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {bulkEntries.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <p className="text-sm text-muted-foreground">No entries added yet. Use the form above to add entries to the bulk.</p>
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Father's Name</TableHead>
+                        <TableHead>Age</TableHead>
+                        <TableHead>MUAC (cm)</TableHead>
+                        <TableHead>Images</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {bulkEntries.map((entry, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{entry.name}</TableCell>
+                          <TableCell>{entry.father}</TableCell>
+                          <TableCell>{entry.age}</TableCell>
+                          <TableCell>{entry.muac}</TableCell>
+                          <TableCell>
+                            {entry.images && entry.images.length > 0 ? (
+                              <div className="flex items-center gap-1">
+                                <ImageIcon className="h-4 w-4" />
+                                <span>{entry.images.length}</span>
+                              </div>
+                            ) : (
+                              "-"
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
         
         <Card className="mt-6">
           <CardHeader className="flex flex-row items-center justify-between">

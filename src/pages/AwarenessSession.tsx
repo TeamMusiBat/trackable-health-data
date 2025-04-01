@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, Plus, Save, X, MapPin, Calendar } from 'lucide-react';
+import { Check, Plus, Save, X, MapPin, Calendar, User } from 'lucide-react';
 import { EditableEntry } from '@/components/EditableEntry';
 import { toast } from '@/hooks/use-toast';
 import { Header } from '@/components/Header';
@@ -36,6 +36,7 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
   const [ucName, setUcName] = useState("");
   const [locationCoords, setLocationCoords] = useState<{latitude: number, longitude: number, accuracy?: number} | null>(null);
   const [locationStatus, setLocationStatus] = useState<string>("");
+  const [sessionConductor, setSessionConductor] = useState<string>("");
   
   // State for individual person form
   const [name, setName] = useState("");
@@ -60,7 +61,15 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
         session.type === (sessionsType === 'fmt' ? 'FMT' : 'Social Mobilizers')
       )
     );
-  }, [awarenessSessionsFMT, awarenessSessionsSM, sessionsType]);
+
+    // Set session conductor
+    if (currentUser?.name) {
+      setSessionConductor(currentUser.name);
+    }
+
+    // Auto-capture location on mount
+    captureLocation();
+  }, [awarenessSessionsFMT, awarenessSessionsSM, sessionsType, currentUser]);
 
   // Update session number when sessions list changes
   useEffect(() => {
@@ -181,7 +190,8 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
       locationCoords: locationCoords || undefined,
       date: new Date(),
       type: sessionsType === 'fmt' ? 'FMT' : 'Social Mobilizers',
-      images: [...images]
+      images: [...images],
+      conductor: sessionConductor
     };
     
     addAwarenessSession(newSession);
@@ -224,7 +234,8 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
       locationCoords: locationCoords || undefined,
       date: new Date(),
       type: sessionsType === 'fmt' ? 'FMT' : 'Social Mobilizers',
-      images: [...images]
+      images: [...images],
+      conductor: sessionConductor
     };
     
     setBulkEntries([...bulkEntries, newSession]);
@@ -301,7 +312,15 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
           </CardHeader>
           
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="conductor">Session Conducted By</Label>
+                <div className="flex items-center space-x-2 p-3 border rounded-md bg-muted">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span>{sessionConductor || (currentUser?.name || "Unknown")}</span>
+                </div>
+              </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="sessionNumber">Session Number</Label>
                 <Input
@@ -314,44 +333,45 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
               
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="villageName">Village Name *</Label>
+                  <Label htmlFor="location">Location Status</Label>
                   {locationCoords && (
-                    <GoogleMapLink 
-                      latitude={locationCoords.latitude} 
-                      longitude={locationCoords.longitude} 
-                      name={villageName || "Location"} 
-                    />
+                    <Button 
+                      type="button" 
+                      variant="ghost"
+                      size="sm"
+                      onClick={captureLocation}
+                      className="h-8"
+                    >
+                      <MapPin className="h-4 w-4 mr-1" />
+                      Refresh
+                    </Button>
                   )}
                 </div>
-                <div className="flex space-x-2">
-                  <Input
-                    id="villageName"
-                    value={villageName}
-                    onChange={(e) => setVillageName(e.target.value)}
-                    className="flex-1"
-                    required
-                  />
-                  <Button 
-                    type="button" 
-                    variant="outline"
-                    onClick={captureLocation}
-                    className="whitespace-nowrap"
-                  >
-                    <MapPin className="h-4 w-4 mr-2" />
-                    Map Location
-                  </Button>
+                
+                <div className={`p-3 border rounded-md ${locationCoords ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800'}`}>
+                  <div className="flex items-center gap-2">
+                    <MapPin className={locationCoords ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"} />
+                    <div className="text-sm">
+                      {locationStatus || (locationCoords ? "Location captured successfully" : "Capturing location...")}
+                      {locationCoords && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Coordinates: {locationCoords.latitude.toFixed(6)}, {locationCoords.longitude.toFixed(6)}
+                          {locationCoords.accuracy && ` (±${locationCoords.accuracy.toFixed(1)}m)`}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                {locationStatus && (
-                  <span className="text-xs text-muted-foreground">
-                    Status: {locationStatus}
-                  </span>
-                )}
-                {locationCoords && (
-                  <span className="text-xs text-muted-foreground">
-                    Coordinates: {locationCoords.latitude.toFixed(6)}, {locationCoords.longitude.toFixed(6)}
-                    {locationCoords.accuracy && ` (±${locationCoords.accuracy.toFixed(1)}m)`}
-                  </span>
-                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="villageName">Village Name *</Label>
+                <Input
+                  id="villageName"
+                  value={villageName}
+                  onChange={(e) => setVillageName(e.target.value)}
+                  required
+                />
               </div>
               
               <div className="space-y-2">
@@ -366,7 +386,7 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
           </CardContent>
         </Card>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Add Participant</CardTitle>
@@ -490,7 +510,7 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
             <CardContent>
               {bulkEntries.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  No entries added yet. Add participants from the form on the left.
+                  No entries added yet. Add participants from the form above.
                 </div>
               ) : (
                 <div className="space-y-4">
