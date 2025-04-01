@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
@@ -29,7 +30,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Navigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { ChildScreeningData, DuplicateEntry } from "@/lib/types";
-import { FileSpreadsheet, Plus, AlertTriangle, MapPin, Building, Wifi, WifiOff, Camera, Image as ImageIcon, User } from "lucide-react";
+import { FileSpreadsheet, Plus, AlertTriangle, Building, Wifi, WifiOff, Camera, Image as ImageIcon, User } from "lucide-react";
+import ChildScreeningLocationControls from "@/components/ChildScreeningLocationControls";
 
 type Gender = "Male" | "Female" | "Other";
 
@@ -43,7 +45,6 @@ const ChildScreening = () => {
     age: "", // Changed from 0 to empty string
     gender: "Male" as Gender, // Using proper type
     muac: "", // Changed from 0 to empty string
-    district: "",
     unionCouncil: "",
     village: "",
     vaccination: "0 - Dose",
@@ -51,15 +52,17 @@ const ChildScreening = () => {
     remarks: "",
     images: [] as string[],
   });
+  
   const [bulkEntries, setBulkEntries] = useState<Array<Omit<ChildScreeningData, 'id' | 'userId' | 'synced'>>>([]);
   const [isBulkEntry, setIsBulkEntry] = useState(false);
   const [duplicateEntry, setDuplicateEntry] = useState<DuplicateEntry>({ exists: false });
   const [locationCoords, setLocationCoords] = useState<{latitude: number, longitude: number, accuracy?: number} | null>(null);
   const [locationStatus, setLocationStatus] = useState<string>("");
   const [screeningConductor, setScreeningConductor] = useState<string>("");
+  const [isLocationPaused, setIsLocationPaused] = useState<boolean>(false);
 
   const storedLocation = localStorage.getItem('screeningLocation');
-  let parsedLocation = { district: "", unionCouncil: "", village: "" };
+  let parsedLocation = { unionCouncil: "", village: "" };
 
   if (storedLocation) {
     try {
@@ -75,7 +78,6 @@ const ChildScreening = () => {
     age: "", // Changed from 0 to empty string
     gender: "Male" as Gender, // Using proper type
     muac: "", // Changed from 0 to empty string
-    district: parsedLocation.district || "",
     unionCouncil: parsedLocation.unionCouncil || "",
     village: parsedLocation.village || "",
     vaccination: "0 - Dose",
@@ -85,7 +87,7 @@ const ChildScreening = () => {
   };
 
   const [locationSet, setLocationSet] = useState(
-    !!(parsedLocation.district && parsedLocation.unionCouncil && parsedLocation.village)
+    !!(parsedLocation.unionCouncil && parsedLocation.village)
   );
   
   const today = new Date().toDateString();
@@ -98,8 +100,10 @@ const ChildScreening = () => {
       setScreeningConductor(currentUser.name);
     }
     
-    captureLocation();
-  }, [currentUser]);
+    if (!isLocationPaused) {
+      captureLocation();
+    }
+  }, [currentUser, isLocationPaused]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
@@ -122,14 +126,13 @@ const ChildScreening = () => {
         [name]: value,
       });
       
-      if (['district', 'unionCouncil', 'village'].includes(name)) {
+      if (['unionCouncil', 'village'].includes(name)) {
         const newLocation = {
-          district: name === 'district' ? value : formData.district,
           unionCouncil: name === 'unionCouncil' ? value : formData.unionCouncil,
           village: name === 'village' ? value : formData.village
         };
         
-        if (newLocation.district && newLocation.unionCouncil && newLocation.village) {
+        if (newLocation.unionCouncil && newLocation.village) {
           localStorage.setItem('screeningLocation', JSON.stringify(newLocation));
           setLocationSet(true);
         }
@@ -145,6 +148,10 @@ const ChildScreening = () => {
   };
 
   const captureLocation = () => {
+    if (isLocationPaused) {
+      return;
+    }
+    
     if (navigator.geolocation) {
       setLocationStatus("Getting GPS location, please wait...");
       
@@ -189,6 +196,22 @@ const ChildScreening = () => {
     }
   };
 
+  const toggleLocationPause = () => {
+    setIsLocationPaused(!isLocationPaused);
+    if (isLocationPaused) {
+      captureLocation(); // Resume location capture
+      toast({
+        title: "Location tracking resumed",
+        description: "Your current location will now be tracked",
+      });
+    } else {
+      toast({
+        title: "Location tracking paused",
+        description: "Your location will not be updated until resumed",
+      });
+    }
+  };
+
   const handleAddToBulk = () => {
     if (!formData.name || !formData.father || !formData.village) {
       toast({
@@ -207,7 +230,7 @@ const ChildScreening = () => {
       fatherOrHusband: formData.father,
       villageName: formData.village,
       conductor: screeningConductor,
-      location: locationCoords || undefined
+      location: isLocationPaused ? undefined : locationCoords || undefined
     };
 
     const duplicate = checkDuplicate(parsedFormData);
@@ -227,12 +250,13 @@ const ChildScreening = () => {
       }
     ]);
     
-    setFormData({
-      ...initialFormState,
-      district: formData.district,
-      unionCouncil: formData.unionCouncil,
-      village: formData.village,
-    });
+    // Reset only name and father fields
+    setFormData(prev => ({
+      ...prev,
+      name: "",
+      father: "",
+    }));
+    
     toast({
       title: "Added to Bulk Entry",
       description: "Child's data added to the bulk entry list.",
@@ -259,7 +283,7 @@ const ChildScreening = () => {
       fatherOrHusband: formData.father,
       villageName: formData.village,
       conductor: screeningConductor,
-      location: locationCoords || undefined
+      location: isLocationPaused ? undefined : locationCoords || undefined
     };
 
     const duplicate = checkDuplicate(parsedFormData);
@@ -277,12 +301,14 @@ const ChildScreening = () => {
     };
 
     await addChildScreening(submissionData);
-    setFormData({
-      ...initialFormState,
-      district: formData.district,
-      unionCouncil: formData.unionCouncil,
-      village: formData.village,
-    });
+    
+    // Reset only name and father fields
+    setFormData(prev => ({
+      ...prev,
+      name: "",
+      father: "",
+    }));
+    
     setDuplicateEntry({ exists: false });
   };
 
@@ -299,16 +325,18 @@ const ChildScreening = () => {
       fatherOrHusband: formData.father,
       villageName: formData.village,
       conductor: screeningConductor,
-      location: locationCoords || undefined
+      location: isLocationPaused ? undefined : locationCoords || undefined
     };
 
     await addChildScreening(submissionData);
-    setFormData({
-      ...initialFormState,
-      district: formData.district,
-      unionCouncil: formData.unionCouncil,
-      village: formData.village,
-    });
+    
+    // Reset only name and father fields
+    setFormData(prev => ({
+      ...prev,
+      name: "",
+      father: "",
+    }));
+    
     setDuplicateEntry({ exists: false });
   };
 
@@ -403,38 +431,13 @@ const ChildScreening = () => {
                 </div>
               </div>
               
-              <div className="space-y-2 md:col-span-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="location">Location Status</Label>
-                  {locationCoords && (
-                    <Button 
-                      type="button" 
-                      variant="ghost"
-                      size="sm"
-                      onClick={captureLocation}
-                      className="h-8"
-                    >
-                      <MapPin className="h-4 w-4 mr-1" />
-                      Refresh
-                    </Button>
-                  )}
-                </div>
-                
-                <div className={`p-3 border rounded-md ${locationCoords ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800'}`}>
-                  <div className="flex items-center gap-2">
-                    <MapPin className={locationCoords ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"} />
-                    <div className="text-sm">
-                      {locationStatus || (locationCoords ? "Location captured successfully" : "Capturing location...")}
-                      {locationCoords && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Coordinates: {locationCoords.latitude.toFixed(6)}, {locationCoords.longitude.toFixed(6)}
-                          {locationCoords.accuracy && ` (±${locationCoords.accuracy.toFixed(1)}m)`}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <ChildScreeningLocationControls
+                locationStatus={locationStatus}
+                locationCoords={locationCoords}
+                isPaused={isLocationPaused}
+                onCaptureLocation={captureLocation}
+                onPauseLocation={toggleLocationPause}
+              />
             </div>
             
             <div className="bg-muted p-4 rounded-md mt-4">
@@ -442,18 +445,7 @@ const ChildScreening = () => {
                 <Building className="h-4 w-4" /> 
                 Screening Location
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="district">District *</Label>
-                  <Input
-                    id="district"
-                    name="district"
-                    value={formData.district}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="unionCouncil">Union Council *</Label>
                   <Input
@@ -741,7 +733,6 @@ const ChildScreening = () => {
                                 { name: "muac", label: "MUAC (cm)", type: "number" },
                                 { name: "village", label: "Village", type: "text" },
                                 { name: "unionCouncil", label: "Union Council", type: "text" },
-                                { name: "district", label: "District", type: "text" },
                                 { name: "remarks", label: "Remarks", type: "text" },
                                 { name: "images", label: "Images", type: "images" }
                               ]}

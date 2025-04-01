@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { LocationsModal } from "@/components/LocationsModal";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import DashboardRecentScreenings from "@/components/DashboardRecentScreenings";
 
 const Dashboard = () => {
   const { currentUser, isAuthenticated } = useAuth();
@@ -39,7 +40,6 @@ const Dashboard = () => {
 
   const [locationModalOpen, setLocationModalOpen] = useState(false);
   const [fieldWorkerLocations, setFieldWorkerLocations] = useState<any[]>([]);
-  const [showRecentScreenings, setShowRecentScreenings] = useState(true);
 
   useEffect(() => {
     const today = new Date().toDateString();
@@ -70,10 +70,30 @@ const Dashboard = () => {
   }, [childScreening, awarenessSessionsFMT, awarenessSessionsSM]);
 
   const handleViewFieldWorkerLocations = () => {
+    // Mock locations with accuracy and isPaused properties
     const mockLocations = [
-      { name: "John Doe", latitude: 31.5204, longitude: 74.3587, lastActive: "10 minutes ago" },
-      { name: "Jane Smith", latitude: 31.5074, longitude: 74.3444, lastActive: "2 hours ago" },
-      { name: "Ahmed Khan", latitude: 31.5102, longitude: 74.3434, lastActive: "5 minutes ago" }
+      { 
+        name: "John Doe", 
+        latitude: 31.5204, 
+        longitude: 74.3587, 
+        lastActive: "10 minutes ago", 
+        accuracy: 12.5 
+      },
+      { 
+        name: "Jane Smith", 
+        latitude: 31.5074, 
+        longitude: 74.3444, 
+        lastActive: "2 hours ago", 
+        accuracy: 5.2,
+        isPaused: true
+      },
+      { 
+        name: "Ahmed Khan", 
+        latitude: 31.5102, 
+        longitude: 74.3434, 
+        lastActive: "5 minutes ago",
+        accuracy: 8.7
+      }
     ];
     
     setFieldWorkerLocations(mockLocations);
@@ -103,16 +123,6 @@ const Dashboard = () => {
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
-
-  const recentScreenings = [...childScreening]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 5);
-
-  const getMuacStatus = (muac: number) => {
-    if (muac <= 11) return { status: "SAM", color: "text-nutrition-sam" };
-    if (muac <= 12) return { status: "MAM", color: "text-nutrition-mam" };
-    return { status: "Normal", color: "text-nutrition-normal" };
-  };
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -214,60 +224,12 @@ const Dashboard = () => {
           </Card>
         </div>
         
-        {(currentUser?.role === 'developer' || currentUser?.role === 'master') && recentScreenings.length > 0 && (
+        {(currentUser?.role === 'developer' || currentUser?.role === 'master') && childScreening.length > 0 && (
           <div className="mb-8">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Recent Screenings</CardTitle>
-                  <CardDescription>
-                    Latest child screening entries
-                  </CardDescription>
-                </div>
-                <Button variant="outline" onClick={() => navigate('/child-screening')}>
-                  View All
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border overflow-hidden mb-4">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Father's Name</TableHead>
-                        <TableHead>Village</TableHead>
-                        <TableHead>Age</TableHead>
-                        <TableHead>MUAC</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {recentScreenings.map((child) => {
-                        const status = getMuacStatus(child.muac);
-                        const rowColor = child.muac <= 11 ? "bg-red-50" : 
-                                        child.muac <= 12 ? "bg-yellow-50" : "bg-green-50";
-                        
-                        return (
-                          <TableRow key={child.id} className={rowColor}>
-                            <TableCell className="font-medium">{child.name}</TableCell>
-                            <TableCell>{child.father}</TableCell>
-                            <TableCell>{child.village}</TableCell>
-                            <TableCell>{child.age} {typeof child.age === 'number' && 'years'}</TableCell>
-                            <TableCell>{child.muac} cm</TableCell>
-                            <TableCell className={status.color + " font-medium"}>
-                              {status.status}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Showing {recentScreenings.length} of {childScreening.length} screenings
-                </div>
-              </CardContent>
-            </Card>
+            <DashboardRecentScreenings 
+              childScreening={childScreening}
+              onExport={() => handleExportScreening('today')}
+            />
           </div>
         )}
         
