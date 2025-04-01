@@ -12,14 +12,16 @@ import { GlobeView } from './GlobeView';
 import { GoogleMapLink } from './GoogleMapLink';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Button } from './ui/button';
-import { RefreshCw, Map, Globe } from 'lucide-react';
+import { RefreshCw, Map, Globe, Navigation, MapPin } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Badge } from './ui/badge';
 
 interface Location {
   name: string;
   latitude: number;
   longitude: number;
   lastActive: string;
+  accuracy?: number;
 }
 
 interface LocationsModalProps {
@@ -79,6 +81,7 @@ export const LocationsModal: React.FC<LocationsModalProps> = ({
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Coordinates</TableHead>
+                  <TableHead>Accuracy</TableHead>
                   <TableHead>Last Active</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -88,9 +91,19 @@ export const LocationsModal: React.FC<LocationsModalProps> = ({
                   <TableRow key={index}>
                     <TableCell className="font-medium">{location.name}</TableCell>
                     <TableCell>
-                      <span className="text-xs">
-                        {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+                      <span className="text-xs flex items-center">
+                        <MapPin className="h-3 w-3 text-primary mr-1" />
+                        {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      {location.accuracy ? (
+                        <Badge variant="outline" className="bg-green-50 dark:bg-green-900/20">
+                          ±{location.accuracy.toFixed(1)}m
+                        </Badge>
+                      ) : (
+                        "Unknown"
+                      )}
                     </TableCell>
                     <TableCell>{location.lastActive}</TableCell>
                     <TableCell>
@@ -98,6 +111,7 @@ export const LocationsModal: React.FC<LocationsModalProps> = ({
                         latitude={location.latitude} 
                         longitude={location.longitude} 
                         name={location.name} 
+                        accuracy={location.accuracy}
                       />
                     </TableCell>
                   </TableRow>

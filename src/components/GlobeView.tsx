@@ -1,6 +1,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { Target, Navigation } from 'lucide-react';
 
 interface Location {
   name: string;
@@ -56,18 +57,18 @@ export const GlobeView: React.FC<GlobeViewProps> = ({ locations }) => {
           
           // Create marker
           const marker = document.createElement('div');
-          marker.className = 'w-3 h-3 bg-red-500 rounded-full cursor-pointer';
+          marker.className = 'w-3 h-3 bg-blue-500 rounded-full cursor-pointer animate-pulse';
           
           // Pulsing effect
           const pulse = document.createElement('div');
-          pulse.className = 'absolute w-3 h-3 bg-red-500 rounded-full animate-ping opacity-75';
+          pulse.className = 'absolute w-3 h-3 bg-blue-500 rounded-full animate-ping opacity-75';
           marker.appendChild(pulse);
           
           // Accuracy circle
           if (location.accuracy) {
             const accuracyCircle = document.createElement('div');
-            const size = Math.max(12, location.accuracy / 2);
-            accuracyCircle.className = 'absolute rounded-full bg-red-500/20';
+            const size = Math.max(12, Math.min(location.accuracy / 10, 30));
+            accuracyCircle.className = 'absolute rounded-full bg-blue-500/20';
             accuracyCircle.style.width = `${size}px`;
             accuracyCircle.style.height = `${size}px`;
             accuracyCircle.style.transform = 'translate(-50%, -50%)';
@@ -79,20 +80,38 @@ export const GlobeView: React.FC<GlobeViewProps> = ({ locations }) => {
           markerContainer.appendChild(marker);
           
           // Tooltip
-          markerContainer.title = `${location.name} (${location.lastActive})`;
+          markerContainer.title = `${location.name} (${location.lastActive})${location.accuracy ? ` - Accuracy: ±${location.accuracy}m` : ''}`;
           
           // Click handler
           markerContainer.addEventListener('click', () => {
             toast({
               title: location.name,
-              description: `Location: ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}
+              description: `Location: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}
                             Last active: ${location.lastActive}
                             Accuracy: ${location.accuracy ? `±${location.accuracy}m` : 'Unknown'}`,
+              action: (
+                <div className="flex items-center gap-2">
+                  <Navigation className="h-4 w-4 text-blue-500" />
+                  <span>View on Map</span>
+                </div>
+              ),
             });
           });
           
           globe.appendChild(markerContainer);
         });
+        
+        // Add current location indicator
+        const centerMarker = document.createElement('div');
+        centerMarker.className = 'absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20';
+        
+        const centerPoint = document.createElement('div');
+        centerPoint.className = 'w-5 h-5 rounded-full bg-white border-2 border-red-500 flex items-center justify-center';
+        centerPoint.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-500"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="1"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="8"></line><line x1="16" y1="12" x2="12" y2="12"></line><line x1="8" y1="12" x2="8" y2="12"></line></svg>';
+        
+        centerMarker.appendChild(centerPoint);
+        globe.appendChild(centerMarker);
+        
       } catch (error) {
         console.error('Failed to initialize globe:', error);
       }
