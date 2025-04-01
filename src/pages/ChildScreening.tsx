@@ -586,6 +586,7 @@ const ChildScreening = () => {
                       <SelectItem value="3rd - Dose">3rd - Dose</SelectItem>
                       <SelectItem value="MR - 1">MR - 1</SelectItem>
                       <SelectItem value="MR - 2">MR - 2</SelectItem>
+                      <SelectItem value="Completed">Completed</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

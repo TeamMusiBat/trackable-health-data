@@ -419,7 +419,7 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="age">Age</Label>
+                    <Label htmlFor="age">Age (Years)</Label>
                     <Input
                       id="age"
                       type="number"
@@ -430,7 +430,7 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="underFiveChildren">Under Five Year Children</Label>
+                    <Label htmlFor="underFiveChildren">Children (Under 5 Years)</Label>
                     <Input
                       id="underFiveChildren"
                       type="number"
@@ -458,7 +458,7 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
                         onCheckedChange={(checked) => setSameUc(!!checked)}
                         defaultChecked
                       />
-                      <Label htmlFor="sameUc" className="cursor-pointer">Person belongs to same UC</Label>
+                      <Label htmlFor="sameUc" className="cursor-pointer">Person Belongs From Same Address</Label>
                     </div>
                     
                     {!sameUc && (
@@ -598,12 +598,12 @@ export function AwarenessSession({ type }: AwarenessSessionProps) {
                         { name: "sessionNumber", label: "Session Number", type: "number" },
                         { name: "name", label: "Name", type: "text" },
                         { name: "fatherOrHusband", label: "Father/Husband Name", type: "text" },
-                        { name: "age", label: "Age", type: "number" },
-                        { name: "underFiveChildren", label: "Under Five Year Children", type: "number" },
+                        { name: "age", label: "Age (Years)", type: "number" },
+                        { name: "underFiveChildren", label: "Children (Under 5 Years)", type: "number" },
                         { name: "contactNumber", label: "Contact Information", type: "text" },
                         { name: "villageName", label: "Village", type: "text" },
                         { name: "ucName", label: "UC Name", type: "text" },
-                        { name: "sameUc", label: "Person belongs to same UC", type: "text" },
+                        { name: "sameUc", label: "Person Belongs From Same Address", type: "text" },
                         { name: "alternateLocation", label: "Alternate Location", type: "text" },
                         { name: "images", label: "Images", type: "images" }
                       ]}
