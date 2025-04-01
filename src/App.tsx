@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -11,6 +12,7 @@ import Index from "@/pages/Index";
 import Login from "@/pages/Login";
 import ChildScreening from "@/pages/ChildScreening";
 import AwarenessSession from "@/pages/AwarenessSession";
+import Blog from "@/pages/Blog";
 import UserManagement from "@/pages/UserManagement";
 import NotFound from "@/pages/NotFound";
 import { RequireAuth } from '@/components/RequireAuth';
@@ -34,6 +36,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/blog" element={<Blog />} />
                 
                 <Route path="/dashboard" element={
                   <RequireAuth>

@@ -24,6 +24,11 @@ export interface ChildScreeningData extends BaseEntry {
   dueVaccine: boolean;
   remarks: string;
   images?: string[]; // Add images field
+  location?: {
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+  };
 }
 
 // Awareness session data
@@ -49,7 +54,7 @@ export interface AwarenessSessionData extends BaseEntry {
 }
 
 // User role type
-export type UserRole = 'developer' | 'master' | 'admin' | 'user';
+export type UserRole = 'developer' | 'master' | 'fmt' | 'social-mobilizer';
 
 // User types
 export interface User {
@@ -68,6 +73,7 @@ export interface User {
     longitude: number;
     accuracy?: number;
   };
+  designation?: string;
 }
 
 // Update AwarenessSession component props to match the casing in App.tsx
@@ -93,6 +99,10 @@ export interface ExportOptions {
   removeImagesColumn?: boolean;
   pakistaniTime?: boolean;
   removeDuplicates?: boolean;
+  dateRange?: {
+    from: Date;
+    to: Date;
+  };
 }
 
 // Editable record marker
@@ -103,3 +113,17 @@ export interface EditableRecord {
 
 // Input field type for form validation
 export type InputFieldType = "text" | "number" | "images";
+
+// Blog post type
+export interface BlogPost {
+  id: string;
+  title: string;
+  content: string;
+  author: string;
+  date: Date;
+  excerpt: string;
+  slug: string;
+  image?: string;
+  tags?: string[];
+  isPublished: boolean;
+}

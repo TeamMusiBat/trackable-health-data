@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
@@ -55,37 +56,47 @@ import { Badge } from "@/components/ui/badge";
 import { User, UserRole } from "@/lib/types";
 import { Eye, EyeOff, MapPin, Plus, RefreshCw, Trash2, UserPlus } from "lucide-react";
 
-const DEMO_USERS: User[] = [
-  {
-    id: "1",
-    username: "asifjamali83",
-    password: "Atifkhan83##",
-    name: "Asif Jamali",
-    email: "asif@example.com",
-    active: true,
-    role: "developer",
-    online: true,
-    lastActive: new Date(),
-    phone: "+923001234567"
-  },
-];
-
 const AddUserForm = ({ onAddUser }: { onAddUser: (userData: any) => void }) => {
   const { currentUser } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [newUser, setNewUser] = useState({
     username: "",
     password: "",
-    role: "user" as UserRole,
+    role: "fmt" as UserRole,
     name: "",
     email: "",
     phone: "",
-    active: true
+    active: true,
+    designation: ""
   });
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAddUser(newUser);
+    
+    // Convert name to camelCase
+    const nameParts = newUser.name.trim().toLowerCase().split(' ');
+    const camelCaseName = nameParts.map(part => {
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    }).join(' ');
+    
+    onAddUser({...newUser, name: camelCaseName});
+  };
+
+  // Determine available roles based on current user role
+  const availableRoles = () => {
+    if (currentUser?.role === "developer") {
+      return [
+        { value: "master", label: "Master" },
+        { value: "fmt", label: "FMT" },
+        { value: "social-mobilizer", label: "Social Mobilizer" }
+      ];
+    } else if (currentUser?.role === "master") {
+      return [
+        { value: "fmt", label: "FMT" },
+        { value: "social-mobilizer", label: "Social Mobilizer" }
+      ];
+    }
+    return [];
   };
   
   return (
@@ -103,6 +114,8 @@ const AddUserForm = ({ onAddUser }: { onAddUser: (userData: any) => void }) => {
               value={newUser.name}
               onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
               required
+              placeholder="Enter full name"
+              className="w-full"
             />
           </div>
           
@@ -113,6 +126,8 @@ const AddUserForm = ({ onAddUser }: { onAddUser: (userData: any) => void }) => {
               value={newUser.username}
               onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
               required
+              placeholder="Enter username"
+              className="w-full"
             />
           </div>
           
@@ -125,6 +140,8 @@ const AddUserForm = ({ onAddUser }: { onAddUser: (userData: any) => void }) => {
                 value={newUser.password}
                 onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                 required
+                placeholder="Enter password"
+                className="w-full"
               />
               <Button
                 type="button"
@@ -148,16 +165,26 @@ const AddUserForm = ({ onAddUser }: { onAddUser: (userData: any) => void }) => {
               value={newUser.role}
               onValueChange={(value: UserRole) => setNewUser({ ...newUser, role: value as UserRole })}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent>
-                {currentUser?.role === "developer" && (
-                  <SelectItem value="master">Master</SelectItem>
-                )}
-                <SelectItem value="user">Research Assistant</SelectItem>
+                {availableRoles().map(role => (
+                  <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="designation">Designation</Label>
+            <Input
+              id="designation"
+              value={newUser.designation}
+              onChange={(e) => setNewUser({ ...newUser, designation: e.target.value })}
+              placeholder="Enter designation"
+              className="w-full"
+            />
           </div>
           
           <div className="space-y-2">
@@ -167,6 +194,8 @@ const AddUserForm = ({ onAddUser }: { onAddUser: (userData: any) => void }) => {
               type="tel"
               value={newUser.phone}
               onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+              placeholder="Enter phone number"
+              className="w-full"
             />
           </div>
           
@@ -177,6 +206,8 @@ const AddUserForm = ({ onAddUser }: { onAddUser: (userData: any) => void }) => {
               type="email"
               value={newUser.email}
               onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+              placeholder="Enter email address"
+              className="w-full"
             />
           </div>
           
@@ -193,9 +224,50 @@ const AddUserForm = ({ onAddUser }: { onAddUser: (userData: any) => void }) => {
 const UsersList = ({ users, onDeleteUser }: { users: User[], onDeleteUser: (userId: string) => void }) => {
   const { currentUser } = useAuth();
   
-  const visibleUsers = currentUser?.role === 'developer' 
-    ? users 
-    : users.filter(user => user.role !== 'developer');
+  // Filter users based on current user role
+  const getVisibleUsers = () => {
+    let filteredUsers = [...users];
+    
+    // If current user is developer, show all users
+    if (currentUser?.role === 'developer') {
+      return filteredUsers;
+    }
+    
+    // For all other roles, hide the developer (Super Admin)
+    return filteredUsers.filter(user => user.role !== 'developer');
+  };
+
+  const visibleUsers = getVisibleUsers();
+  
+  const getRoleBadgeVariant = (role: UserRole) => {
+    switch(role) {
+      case 'developer':
+        return 'default';
+      case 'master':
+        return 'secondary';
+      case 'fmt':
+        return 'outline';
+      case 'social-mobilizer':
+        return 'outline';
+      default:
+        return 'outline';
+    }
+  };
+  
+  const getRoleDisplayName = (role: UserRole) => {
+    switch(role) {
+      case 'developer':
+        return 'Super Admin';
+      case 'master':
+        return 'Master';
+      case 'fmt':
+        return 'FMT';
+      case 'social-mobilizer':
+        return 'Social Mobilizer';
+      default:
+        return role;
+    }
+  };
     
   return (
     <Card>
@@ -212,55 +284,59 @@ const UsersList = ({ users, onDeleteUser }: { users: User[], onDeleteUser: (user
                 <TableHead>Username</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Designation</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Last Active</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {visibleUsers.map((user, index) => (
-                <TableRow key={user.id}>
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell className="font-medium">{user.username}</TableCell>
-                  <TableCell>{user.name}</TableCell>
-                  <TableCell>
-                    <Badge variant={
-                      user.role === "developer" ? "default" :
-                      user.role === "master" ? "secondary" :
-                      "outline"
-                    }>
-                      {user.role === "developer" ? "Super Admin" :
-                       user.role === "master" ? "Master" :
-                       "Research Assistant"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      <div className={`w-2 h-2 rounded-full mr-2 ${
-                        user.online ? "bg-green-500" : "bg-gray-400"
-                      }`}></div>
-                      {user.online ? "Online" : "Offline"}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {user.lastActive ? new Date(user.lastActive).toLocaleString('en-PK', {
-                      timeZone: 'Asia/Karachi'
-                    }) : "Never"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {user.id !== "1" && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onDeleteUser(user.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
+              {visibleUsers.length > 0 ? (
+                visibleUsers.map((user, index) => (
+                  <TableRow key={user.id}>
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell className="font-medium">{user.username}</TableCell>
+                    <TableCell>{user.name}</TableCell>
+                    <TableCell>
+                      <Badge variant={getRoleBadgeVariant(user.role)}>
+                        {getRoleDisplayName(user.role)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{user.designation || "-"}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <div className={`w-2 h-2 rounded-full mr-2 ${
+                          user.online ? "bg-green-500" : "bg-gray-400"
+                        }`}></div>
+                        {user.online ? "Online" : "Offline"}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {user.lastActive ? new Date(user.lastActive).toLocaleString('en-PK', {
+                        timeZone: 'Asia/Karachi'
+                      }) : "Never"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {user.id !== "1" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onDeleteUser(user.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-4">
+                    No users found
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </div>
@@ -270,6 +346,13 @@ const UsersList = ({ users, onDeleteUser }: { users: User[], onDeleteUser: (user
 };
 
 const LocationTracking = ({ users, onRefreshLocations }: { users: User[], onRefreshLocations: () => void }) => {
+  const { currentUser } = useAuth();
+  
+  // Filter to only show field workers (FMT and Social Mobilizers)
+  const fieldWorkers = users.filter(user => 
+    user.role === 'fmt' || user.role === 'social-mobilizer'
+  );
+  
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -293,17 +376,26 @@ const LocationTracking = ({ users, onRefreshLocations }: { users: User[], onRefr
             </div>
           </div>
           
-          {/* Sample marker for the one worker with location */}
-          <div className="absolute top-1/2 left-1/3 transform -translate-x-1/2 -translate-y-1/2">
-            <div className="flex flex-col items-center">
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-                <MapPin className="h-5 w-5" />
-              </div>
-              <div className="mt-1 px-2 py-1 bg-background rounded-md text-xs shadow-sm">
-                field_worker1
+          {/* Sample marker for field workers with location */}
+          {fieldWorkers.slice(0, 3).map((worker, index) => (
+            <div 
+              key={worker.id}
+              className={`absolute transform -translate-x-1/2 -translate-y-1/2`}
+              style={{ 
+                top: `${30 + (index * 15)}%`, 
+                left: `${20 + (index * 20)}%` 
+              }}
+            >
+              <div className="flex flex-col items-center">
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
+                  <MapPin className="h-5 w-5" />
+                </div>
+                <div className="mt-1 px-2 py-1 bg-background rounded-md text-xs shadow-sm">
+                  {worker.username}
+                </div>
               </div>
             </div>
-          </div>
+          ))}
         </div>
         
         <div className="mt-6">
@@ -313,18 +405,21 @@ const LocationTracking = ({ users, onRefreshLocations }: { users: User[], onRefr
               <TableHeader>
                 <TableRow>
                   <TableHead>Username</TableHead>
+                  <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Last Updated</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users
-                  .filter(user => user.role === "user")
-                  .map((user) => (
+                {fieldWorkers.length > 0 ? (
+                  fieldWorkers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">
                         {user.username}
+                      </TableCell>
+                      <TableCell>
+                        {user.role === 'fmt' ? 'FMT' : 'Social Mobilizer'}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center">
@@ -349,7 +444,14 @@ const LocationTracking = ({ users, onRefreshLocations }: { users: User[], onRefr
                         }) : "Never"}
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-4">
+                      No field workers found
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
@@ -375,6 +477,7 @@ const ActivityLogs = () => {
               <TableRow>
                 <TableHead>Timestamp</TableHead>
                 <TableHead>User</TableHead>
+                <TableHead>Role</TableHead>
                 <TableHead>Action</TableHead>
                 <TableHead>Details</TableHead>
               </TableRow>
@@ -383,24 +486,28 @@ const ActivityLogs = () => {
               <TableRow>
                 <TableCell>{new Date().toLocaleString('en-PK', {timeZone: 'Asia/Karachi'})}</TableCell>
                 <TableCell>asifjamali83</TableCell>
+                <TableCell>Super Admin</TableCell>
                 <TableCell>Login</TableCell>
-                <TableCell>Successful login from IP 192.168.1.1</TableCell>
+                <TableCell>Successful login</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell>{new Date(Date.now() - 3600000).toLocaleString('en-PK', {timeZone: 'Asia/Karachi'})}</TableCell>
-                <TableCell>field_worker1</TableCell>
+                <TableCell>fmt_user1</TableCell>
+                <TableCell>FMT</TableCell>
                 <TableCell>Data Entry</TableCell>
                 <TableCell>Added 5 new child screening records</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell>{new Date(Date.now() - 7200000).toLocaleString('en-PK', {timeZone: 'Asia/Karachi'})}</TableCell>
                 <TableCell>master_user</TableCell>
+                <TableCell>Master</TableCell>
                 <TableCell>Export</TableCell>
                 <TableCell>Exported child screening data for all records</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell>{new Date(Date.now() - 86400000).toLocaleString('en-PK', {timeZone: 'Asia/Karachi'})}</TableCell>
-                <TableCell>field_worker2</TableCell>
+                <TableCell>sm_user1</TableCell>
+                <TableCell>Social Mobilizer</TableCell>
                 <TableCell>Sync</TableCell>
                 <TableCell>Synchronized offline data (15 records)</TableCell>
               </TableRow>
@@ -408,7 +515,7 @@ const ActivityLogs = () => {
           </Table>
         </div>
         <div className="mt-4 text-center text-sm text-muted-foreground">
-          This is a demo view. In the actual implementation, this would display real activity logs from the database.
+          Activity logs show recent actions performed by users in the system
         </div>
       </CardContent>
     </Card>
@@ -416,52 +523,42 @@ const ActivityLogs = () => {
 };
 
 const UserManagement = () => {
-  const { currentUser, isAuthenticated } = useAuth();
-  const [users, setUsers] = useState<User[]>(DEMO_USERS);
+  const { currentUser, isAuthenticated, addUser } = useAuth();
+  const [users, setUsers] = useState<User[]>(() => {
+    const storedUsers = localStorage.getItem('track4health_users');
+    return storedUsers ? JSON.parse(storedUsers) : [];
+  });
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Load users from localStorage
+    const storedUsers = localStorage.getItem('track4health_users');
+    if (storedUsers) {
+      try {
+        setUsers(JSON.parse(storedUsers));
+      } catch (error) {
+        console.error('Failed to parse stored users', error);
+      }
+    }
+  }, []);
 
   const hasAdminPermissions = 
     currentUser?.role === "developer" || currentUser?.role === "master";
     
-  const handleAddUser = (userData: any) => {
-    if (!userData.username || !userData.password || !userData.name) {
-      toast({
-        title: "Missing information",
-        description: "Username, password, and name are required",
-        variant: "destructive",
-      });
-      return;
+  const handleAddUser = async (userData: any) => {
+    const success = await addUser(userData);
+    if (success) {
+      // Refresh the users list
+      const storedUsers = localStorage.getItem('track4health_users');
+      if (storedUsers) {
+        try {
+          setUsers(JSON.parse(storedUsers));
+        } catch (error) {
+          console.error('Failed to parse stored users', error);
+        }
+      }
     }
-
-    if (users.some(user => user.username === userData.username)) {
-      toast({
-        title: "Username already exists",
-        description: "Please choose a different username",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const newUserEntry: User = {
-      id: (users.length + 1).toString(),
-      username: userData.username,
-      password: userData.password,
-      name: userData.name,
-      email: userData.email || undefined,
-      phone: userData.phone || undefined,
-      active: true,
-      role: userData.role,
-      online: false,
-      lastActive: new Date(),
-    };
-
-    setUsers([...users, newUserEntry]);
-    
-    toast({
-      title: "User created",
-      description: `User ${userData.username} has been created successfully`,
-    });
   };
 
   const handleDeleteUser = (id: string) => {
@@ -479,7 +576,10 @@ const UserManagement = () => {
       return;
     }
 
-    setUsers(users.filter(user => user.id !== id));
+    const updatedUsers = users.filter(user => user.id !== id);
+    setUsers(updatedUsers);
+    localStorage.setItem('track4health_users', JSON.stringify(updatedUsers));
+    
     setUserToDelete(null);
     setShowDeleteDialog(false);
     
@@ -537,16 +637,60 @@ const UserManagement = () => {
           </p>
         </div>
         
-        <Tabs defaultValue="users">
-          <TabsList className="mb-6 w-full sm:w-auto">
+        <Tabs defaultValue="users" className="w-full">
+          <TabsList className="mb-6 w-full sm:w-auto grid grid-cols-3 sm:flex">
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="location">Location Tracking</TabsTrigger>
             <TabsTrigger value="activity">Activity Logs</TabsTrigger>
           </TabsList>
           
           <TabsContent value="users">
-            <div className="grid grid-cols-1 gap-6 mb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
               <AddUserForm onAddUser={handleAddUser} />
+              <div className="hidden lg:block">
+                <Card className="h-full">
+                  <CardHeader>
+                    <CardTitle>User Management Guide</CardTitle>
+                    <CardDescription>How to manage users in the system</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4 text-sm">
+                      <div>
+                        <h3 className="font-medium">Available Roles:</h3>
+                        <ul className="list-disc pl-5 mt-2 space-y-1">
+                          {currentUser?.role === "developer" && (
+                            <li>
+                              <strong>Master:</strong> Can manage users and access all data
+                            </li>
+                          )}
+                          <li>
+                            <strong>FMT:</strong> Field monitoring team members who can enter data
+                          </li>
+                          <li>
+                            <strong>Social Mobilizer:</strong> Community workers who can conduct awareness sessions
+                          </li>
+                        </ul>
+                      </div>
+                      <div>
+                        <h3 className="font-medium">User Permissions:</h3>
+                        <ul className="list-disc pl-5 mt-2 space-y-1">
+                          <li>Only Super Admin and Masters can add/remove users</li>
+                          <li>Masters can only add FMT and Social Mobilizer users</li>
+                          <li>Regular users can only enter and view their own data</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <h3 className="font-medium">Tips:</h3>
+                        <ul className="list-disc pl-5 mt-2 space-y-1">
+                          <li>Ensure usernames are unique and passwords are secure</li>
+                          <li>Assign appropriate roles based on responsibilities</li>
+                          <li>Regularly monitor user activity through the logs</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
             
             <div className="grid grid-cols-1 gap-6">

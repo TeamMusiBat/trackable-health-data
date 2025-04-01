@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
@@ -10,6 +9,7 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   role: UserRole | null;
+  addUser: (userData: Omit<User, 'id' | 'online' | 'lastActive'>) => Promise<boolean>;
 }
 
 const initialUsers: User[] = [
@@ -23,7 +23,7 @@ const initialUsers: User[] = [
     password: 'Atifkhan83##',
     online: true,
     lastActive: new Date()
-  },
+  }
 ];
 
 const AuthContext = createContext<AuthContextType>({
@@ -33,6 +33,7 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
   isAuthenticated: false,
   role: null,
+  addUser: async () => false,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -40,6 +41,22 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [users, setUsers] = useState<User[]>(() => {
+    const storedUsers = localStorage.getItem('track4health_users');
+    if (storedUsers) {
+      try {
+        return JSON.parse(storedUsers);
+      } catch (error) {
+        console.error('Failed to parse stored users', error);
+        return initialUsers;
+      }
+    }
+    return initialUsers;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('track4health_users', JSON.stringify(users));
+  }, [users]);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('track4health_user');
@@ -81,6 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           location: {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
           },
           lastActive: new Date(),
         };
@@ -101,7 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [currentUser?.id]);
 
   const login = async (username: string, password: string): Promise<boolean> => {
-    const foundUser = initialUsers.find(
+    const foundUser = users.find(
       (user) => user.username === username && user.password === password
     );
 
@@ -113,6 +131,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       setCurrentUser(userWithStatus);
       localStorage.setItem('track4health_user', JSON.stringify(userWithStatus));
+      
+      const updatedUsers = users.map(user => 
+        user.id === foundUser.id ? { ...user, online: true, lastActive: new Date() } : user
+      );
+      setUsers(updatedUsers);
+      
       toast({
         title: "Login successful",
         description: `Welcome back!`,
@@ -129,7 +153,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    if (currentUser?.role !== 'developer') {
+    if (currentUser?.role !== 'developer' && currentUser?.role !== 'master') {
       toast({
         title: "Action restricted",
         description: "Only administrators can logout from the system",
@@ -138,8 +162,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     
+    if (currentUser) {
+      const updatedUsers = users.map(user => 
+        user.id === currentUser.id ? { ...user, online: false, lastActive: new Date() } : user
+      );
+      setUsers(updatedUsers);
+    }
+    
     setCurrentUser(null);
     localStorage.removeItem('track4health_user');
+    
+    toast({
+      title: "Logged out",
+      description: "You have been logged out successfully",
+    });
+  };
+
+  const addUser = async (userData: Omit<User, 'id' | 'online' | 'lastActive'>): Promise<boolean> => {
+    if (!currentUser || (currentUser.role !== 'developer' && currentUser.role !== 'master')) {
+      toast({
+        title: "Permission denied",
+        description: "You don't have permission to add users",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (currentUser.role === 'master' && userData.role === 'master') {
+      toast({
+        title: "Permission denied",
+        description: "Master users can only add FMT or Social Mobilizer users",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (users.some(user => user.username === userData.username)) {
+      toast({
+        title: "Username already exists",
+        description: "Please choose a different username",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    const newUser: User = {
+      id: (users.length + 1).toString(),
+      ...userData,
+      online: false,
+      lastActive: new Date(),
+    };
+
+    setUsers(prevUsers => [...prevUsers, newUser]);
+    
+    toast({
+      title: "User created successfully",
+      description: `User ${userData.name} has been added to the system`,
+    });
+    return true;
   };
 
   const value = {
@@ -149,6 +229,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     isAuthenticated: !!currentUser,
     role: currentUser?.role || null,
+    addUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
